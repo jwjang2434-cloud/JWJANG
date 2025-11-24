@@ -1,0 +1,5 @@
+{
+  "name": "InnoHR - 사내 지식 챗봇",
+  "description": "사내 규정 및 HR 정보를 기반으로 답변하는 스마트 챗봇 서비스입니다.",
+  "requestFramePermissions": []
+}
