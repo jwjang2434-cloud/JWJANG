@@ -19,13 +19,16 @@ import SettingsModal from './components/SettingsModal';
 import PDFViewer from './components/PDFViewer';
 import NoticeBoard from './components/NoticeBoard';
 import { LATEST_NOTICE } from './constants';
-import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice } from './types';
+import DateTimeDisplay from './components/DateTimeDisplay';
+import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice, MenuItem } from './types';
+import MenuManagement from './components/MenuManagement';
 
 const App: React.FC = () => {
   // [개발 연동 주석]: 전역 상태 관리 (Redux, Recoil 등) 권장
   const [user, setUser] = useState<UserProfile | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewPage>('CHAT');
+  const [currentView, setCurrentView] = useState<ViewPage>('NOTICE_BOARD');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -52,6 +55,69 @@ const App: React.FC = () => {
   const [showBiorhythm, setShowBiorhythm] = useState(() => {
     return localStorage.getItem('showBiorhythm') !== 'false';
   });
+
+  // Menu Items State
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([
+    {
+      id: 'MEETING',
+      label: '회의실 예약',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+    },
+    {
+      id: 'FORMS',
+      label: '신청서 작성',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+    },
+    {
+      id: 'MENU',
+      label: '주간 식단표',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+    },
+    {
+      id: 'CAFE',
+      label: '사내 카페',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+    },
+    {
+      id: 'SNACK',
+      label: '간식 신청',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" /></svg>
+    },
+    {
+      id: 'BUS',
+      label: '통근버스',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+    },
+    {
+      id: 'SUGGESTION',
+      label: '건의함',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+    },
+    {
+      id: 'NEWSLETTER',
+      label: '뉴스레터',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+    },
+    {
+      id: 'BROCHURE',
+      label: '회사 브로슈어',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+    },
+    {
+      id: 'ORG_CHART',
+      label: '조직도',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+    },
+    {
+      id: 'REGULATIONS',
+      label: '사내 규정',
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+    }
+  ]);
+
+  const handleUpdateMenuItems = (newItems: MenuItem[]) => {
+    setMenuItems(newItems);
+  };
 
   useEffect(() => {
     localStorage.setItem('showBiorhythm', String(showBiorhythm));
@@ -150,7 +216,8 @@ const App: React.FC = () => {
   const handleLogout = () => {
     // confirm 없이 즉시 로그아웃
     setUser(null);
-    setCurrentView('CHAT');
+    setCurrentView('NOTICE_BOARD');
+    setIsChatOpen(false);
     setSidebarOpen(false);
     setActiveNotice(null);
     setActiveDocument(null);
@@ -207,6 +274,8 @@ const App: React.FC = () => {
         onOpenSettings={() => setShowSettings(true)}
         onOpenDocument={(doc) => setActiveDocument(doc)}
         onOpenNotice={(notice) => setActiveNotice(notice)}
+        menuItems={menuItems}
+        onUpdateMenuItems={handleUpdateMenuItems}
       />
 
       <main className="flex-1 flex flex-col relative h-full w-full overflow-hidden transition-all duration-300">
@@ -253,30 +322,41 @@ const App: React.FC = () => {
               )}
             </button>
 
-            {/* Notification Icon */}
-            <button className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" title="알림">
-              <div className="relative">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-              </div>
-            </button>
-
-            {/* Settings Icon */}
-            <button
-              onClick={() => setShowSettings(true)}
-              className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="설정"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
+            {/* Date Time Display */}
+            <DateTimeDisplay />
           </div>
         </header>
 
         {/* View Content Area - Scroll Fix Applied */}
-        <div className={`flex-1 relative bg-slate-50 dark:bg-slate-950 transition-colors duration-300 ${currentView === 'CHAT' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-          <div className={`w-full h-full ${currentView === 'CHAT' ? 'block' : 'hidden'}`}>
-            <ChatInterface userCompany={user.companyName} userName={user.name} llmConfig={llmConfig} />
+        <div className={`flex-1 relative bg-slate-50 dark:bg-slate-950 transition-colors duration-300 overflow-y-auto`}>
+
+          {/* Floating Chat Widget */}
+          <div className={`fixed bottom-20 right-6 z-50 w-[400px] h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <h3 className="font-bold text-slate-800 dark:text-white">HR Assistant</h3>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden relative">
+              <ChatInterface userCompany={user.companyName} userName={user.name} llmConfig={llmConfig} />
+            </div>
           </div>
+
+          {/* Floating Action Button */}
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${isChatOpen ? 'bg-slate-700 text-white rotate-90' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+          >
+            {isChatOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+            )}
+          </button>
 
           {currentView === 'MEETING' && <MeetingRoom user={user} />}
           {currentView === 'FORMS' && <FormsLibrary user={user} />}
@@ -289,6 +369,7 @@ const App: React.FC = () => {
           {currentView === 'BROCHURE' && <CompanyBrochure />}
           {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
+          {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
           {currentView === 'NOTICE_BOARD' && <NoticeBoard user={user} externalSelectedNotice={noticeToViewInBoard} />}
         </div>
 

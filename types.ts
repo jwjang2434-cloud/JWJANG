@@ -84,4 +84,11 @@ export interface OrgNode {
 }
 
 // Navigation State
-export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD';
+export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT';
+
+export interface MenuItem {
+  id: ViewPage;
+  label: string;
+  icon?: React.ReactNode; // Icon is optional for custom added items
+  isCustom?: boolean; // Flag to identify custom added items
+}
