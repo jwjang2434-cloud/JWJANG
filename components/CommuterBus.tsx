@@ -94,12 +94,82 @@ const CommuterBus: React.FC<CommuterBusProps> = ({ user }) => {
 
     const activeRoute = routes.find(r => r.id === activeTabId);
 
-    const handleSave = () => {
+    // TypeScript 코드 생성 함수
+    const generateTypeScriptCode = (routes: BusRoute[]): string => {
+        const routesCode = routes.map(route => {
+            const stationsCode = route.stations.map(station => {
+                const fields: string[] = [];
+                fields.push(`name: '${station.name}'`);
+                fields.push(`time: '${station.time}'`);
+                fields.push(`locationDesc: '${station.locationDesc}'`);
+                return `                { ${fields.join(', ')} }`;
+            }).join(',\n');
+
+            return `        {
+            id: '${route.id}',
+            name: '${route.name}',
+            driverName: '${route.driverName}',
+            driverPhone: '${route.driverPhone}',
+            stations: [
+${stationsCode}
+            ]
+        }`;
+        }).join(',\n');
+
+        return `// 통근버스 노선 데이터
+// 생성 날짜: ${new Date().toLocaleString('ko-KR')}
+
+import { ReferenceDoc, Notice } from './types';
+
+interface Station {
+    name: string;
+    time: string;
+    locationDesc: string;
+    stationImage?: string;
+}
+
+interface BusRoute {
+    id: string;
+    name: string;
+    driverName: string;
+    driverPhone: string;
+    stations: Station[];
+}
+
+export const COMMUTER_ROUTES: BusRoute[] = [
+${routesCode}
+];`;
+    };
+
+    const handleSave = async () => {
         // 저장 시 LocalStorage에 업데이트
         localStorage.setItem('commuterRoutes', JSON.stringify(routes));
+
+        // TypeScript 코드 생성
+        const code = generateTypeScriptCode(routes);
+
+        try {
+            // 백엔드 API 호출 - constants.ts 파일 자동 저장
+            const response = await fetch('/api/save-routes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ 노선 정보가 저장되고 constants.ts 파일이 자동으로 업데이트되었습니다!');
+            } else {
+                throw new Error(result.error || 'Failed to save');
+            }
+        } catch (error) {
+            console.error('파일 자동 저장 실패:', error);
+            alert('⚠️ constants.ts 파일 자동 저장에 실패했습니다. localStorage에는 저장되었습니다.');
+        }
+
         setIsEditing(false);
         setOpenTooltipIndex(null);
-        alert('노선 정보가 저장되었습니다.');
     };
 
     // 노선 추가/삭제/수정 핸들러들
