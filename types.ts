@@ -36,6 +36,7 @@ export interface ReferenceDoc {
   lastUpdated: string;
   content: string; // 문서의 실제 텍스트 내용 (Mock RAG용)
   keywords: string[]; // 검색을 위한 키워드 태그
+  fileUrl?: string; // 실제 파일 URL (PDF 뷰어용)
 }
 
 export interface Notice {

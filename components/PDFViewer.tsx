@@ -135,8 +135,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ title, fileUrl, onClose, user, ty
                </div>
 
                {/* Document Mock Display */}
-               <div className="bg-white shadow-2xl min-h-[800px] w-[600px] md:w-[700px] lg:w-[800px] relative z-0 p-12 text-slate-800 overflow-y-auto max-h-full">
-                  {customImage ? (
+               <div className={`bg-white shadow-2xl ${fileUrl && type === 'PDF' ? 'w-full h-full p-0' : 'min-h-[800px] w-[600px] md:w-[700px] lg:w-[800px] p-12'} relative z-0 text-slate-800 overflow-y-auto max-h-full`}>
+                  {fileUrl && type === 'PDF' ? (
+                     <iframe src={`${fileUrl}#toolbar=0`} className="w-full h-full" title={title} />
+                  ) : customImage ? (
                      <div className="flex flex-col items-center">
                         <h1 className="text-3xl font-extrabold uppercase tracking-wide text-slate-900 mb-8">{title}</h1>
                         <img src={customImage} alt="Menu" className="w-full h-auto rounded shadow-md" />
