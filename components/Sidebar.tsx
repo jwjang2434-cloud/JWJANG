@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { REFERENCE_DOCS, LATEST_NOTICE } from '../constants';
 import { UserProfile, ViewPage, UserRole, ReferenceDoc, Notice, MenuItem } from '../types';
 import BioRhythm from './BioRhythm';
 
@@ -15,6 +14,7 @@ interface SidebarProps {
   onOpenNotice: (notice: Notice) => void;
   menuItems: MenuItem[];
   onUpdateMenuItems: (newItems: MenuItem[]) => void;
+  latestNotice: Notice | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -28,9 +28,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenDocument,
   onOpenNotice,
   menuItems,
-  onUpdateMenuItems
+  onUpdateMenuItems,
+  latestNotice
 }) => {
-  const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(true);
   const [isReordering, setIsReordering] = useState(false);
 
   const isAdmin = user.role === UserRole.ADMIN;
@@ -81,27 +81,29 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Notice Widget (필독 공지) - 클릭 시 팝업 오픈 */}
-        <div className="px-4 mt-6 mb-4">
-          <button
-            onClick={() => onOpenNotice(LATEST_NOTICE)}
-            className="w-full group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl p-4 text-left shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 border border-white/10"
-          >
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex-1 mr-2 overflow-hidden">
-                <p className="text-indigo-100 text-xs font-medium mb-0.5">필독 공지</p>
-                <h3 className="text-white font-bold text-sm truncate">{LATEST_NOTICE.title}</h3>
+        {latestNotice && (
+          <div className="px-4 mt-6 mb-4">
+            <button
+              onClick={() => onOpenNotice(latestNotice)}
+              className="w-full group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl p-4 text-left shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 border border-white/10"
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex-1 mr-2 overflow-hidden">
+                  <p className="text-indigo-100 text-xs font-medium mb-0.5">필독 공지</p>
+                  <h3 className="text-white font-bold text-sm truncate">{latestNotice.title}</h3>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                </div>
               </div>
-              <div className="bg-white/20 p-2 rounded-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-              </div>
-            </div>
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-          </button>
-        </div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            </button>
+          </div>
+        )}
 
         {/* User Profile */}
         <div className="px-4 mb-3">
-          <div className="p-3 bg-slate-800/50 rounded-xl flex items-center gap-3 border border-slate-700/50 backdrop-blur-sm">
+          <div className="relative z-20 p-3 bg-slate-800/50 rounded-xl flex items-center gap-3 border border-slate-700/50 backdrop-blur-sm">
             <img src={user.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/30" />
             <div className="overflow-hidden flex-1">
               <div className="flex items-center gap-1 mb-0.5">
@@ -204,40 +206,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="border-t border-slate-800"></div>
           </div>
 
-          {/* Knowledge Base */}
-          <div>
-            <button
-              onClick={() => setIsKnowledgeBaseOpen(!isKnowledgeBaseOpen)}
-              className="w-full flex items-center justify-between px-2 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:bg-slate-800/50 rounded-lg transition-colors group mb-2"
-            >
-              <span>연동된 지식 베이스</span>
-              <svg
-                className={`w-4 h-4 transition-transform duration-200 ${isKnowledgeBaseOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
 
-            <div className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${isKnowledgeBaseOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-              {REFERENCE_DOCS.map((doc) => (
-                <div
-                  key={doc.id}
-                  onClick={() => onOpenDocument(doc)}
-                  className="group flex items-center justify-between px-3 py-2 text-slate-400 hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <svg className={`w-4 h-4 flex-shrink-0 ${doc.type === 'PDF' ? 'text-red-400' : doc.type === 'DOC' ? 'text-blue-400' : 'text-green-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span className="text-xs truncate group-hover:text-white">{doc.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </nav>
 
         {/* Footer */}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
@@ -18,7 +17,7 @@ import NoticePopup from './components/NoticePopup';
 import SettingsModal from './components/SettingsModal';
 import PDFViewer from './components/PDFViewer';
 import NoticeBoard from './components/NoticeBoard';
-import { LATEST_NOTICE } from './constants';
+import { LATEST_NOTICE, NOTICE_LIST } from './constants';
 import DateTimeDisplay from './components/DateTimeDisplay';
 import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice, MenuItem } from './types';
 import MenuManagement from './components/MenuManagement';
@@ -34,9 +33,37 @@ const App: React.FC = () => {
 
   // Selected Notice for Popup (Allows viewing any notice, not just latest)
   const [activeNotice, setActiveNotice] = useState<Notice | null>(null);
+  const [popupQueue, setPopupQueue] = useState<Notice[]>([]); // Queue for Must Read notices
 
   // Notice to be viewed in the NoticeBoard (Detail View)
   const [noticeToViewInBoard, setNoticeToViewInBoard] = useState<Notice | null>(null);
+
+  // Global Notices State
+  const [allNotices, setAllNotices] = useState<Notice[]>(() => {
+    const saved = localStorage.getItem('notices');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse notices", e);
+        return NOTICE_LIST;
+      }
+    }
+    return NOTICE_LIST;
+  });
+
+  // Persist notices
+  useEffect(() => {
+    localStorage.setItem('notices', JSON.stringify(allNotices));
+  }, [allNotices]);
+
+  // Derive Latest Notice (MUST_READ, sorted by date/id)
+  const latestNotice = allNotices
+    .filter(n => n.type === 'MUST_READ')
+    .sort((a, b) => {
+      if (a.date !== b.date) return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return b.id.localeCompare(a.id);
+    })[0] || null;
 
   // Document Viewer State
   const [activeDocument, setActiveDocument] = useState<ReferenceDoc | null>(null);
@@ -151,31 +178,54 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Notice Popup Check Logic (Auto-show latest on login)
+  // Notice Popup Check Logic (Auto-show unread MUST_READ notices)
   useEffect(() => {
     if (user) {
-      const storageKey = `hide_notice_${user.id}`;
-      const storedData = localStorage.getItem(storageKey);
+      // 1. Get all notices (merged with localStorage if implemented in NoticeBoard, but here we read 'notices' key)
+      // We already have allNotices state now
 
-      if (storedData) {
-        try {
-          const parsedData = JSON.parse(storedData);
-          const now = new Date().getTime();
-          if (parsedData.noticeId === LATEST_NOTICE.id && parsedData.expires > now) {
-            setActiveNotice(null);
-          } else {
-            setActiveNotice(LATEST_NOTICE);
+      // 2. Filter MUST_READ notices
+      const mustReadNotices = allNotices.filter(n => n.type === 'MUST_READ');
+
+      // 3. Filter out those hidden by user preference
+      const unreadNotices = mustReadNotices.filter(notice => {
+        const storageKey = `hide_notice_${user.id}_${notice.id}`;
+        const storedData = localStorage.getItem(storageKey);
+        if (storedData) {
+          try {
+            const parsedData = JSON.parse(storedData);
+            const now = new Date().getTime();
+            if (parsedData.expires > now) {
+              return false; // Hidden and not expired
+            }
+          } catch (e) {
+            return true; // Error parsing, show it
           }
-        } catch (e) {
-          setActiveNotice(LATEST_NOTICE);
         }
-      } else {
-        setActiveNotice(LATEST_NOTICE);
-      }
+        return true; // No hidden record
+      });
+
+      setPopupQueue(unreadNotices);
     } else {
+      setPopupQueue([]);
       setActiveNotice(null);
     }
   }, [user]);
+
+  // Process Popup Queue
+  useEffect(() => {
+    if (popupQueue.length > 0 && !activeNotice) {
+      setActiveNotice(popupQueue[0]);
+    }
+  }, [popupQueue, activeNotice]);
+
+  const handleClosePopup = () => {
+    setActiveNotice(null);
+    // Remove the current notice from queue after a short delay to allow animation
+    setTimeout(() => {
+      setPopupQueue(prev => prev.slice(1));
+    }, 300);
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -210,6 +260,11 @@ const App: React.FC = () => {
     setActiveNotice(null); // 팝업 닫기
     setNoticeToViewInBoard(notice); // 상세 볼 공지 설정
     setCurrentView('NOTICE_BOARD'); // 화면 전환
+
+    // Remove from queue so next one shows up
+    setTimeout(() => {
+      setPopupQueue(prev => prev.slice(1));
+    }, 300);
   };
 
   // 로그아웃 처리
@@ -234,7 +289,7 @@ const App: React.FC = () => {
       {activeNotice && (
         <NoticePopup
           notice={activeNotice}
-          onClose={() => setActiveNotice(null)}
+          onClose={handleClosePopup}
           userId={user.id}
           onGoToPost={handleGoToPostFromPopup}
         />
@@ -276,6 +331,7 @@ const App: React.FC = () => {
         onOpenNotice={(notice) => setActiveNotice(notice)}
         menuItems={menuItems}
         onUpdateMenuItems={handleUpdateMenuItems}
+        latestNotice={latestNotice}
       />
 
       <main className="flex-1 flex flex-col relative h-full w-full overflow-hidden transition-all duration-300">
@@ -295,7 +351,7 @@ const App: React.FC = () => {
               <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight transition-colors">
                 {user.companyName}
               </h2>
-              <span className="text-xs text-slate-500 dark:text-slate-400">Smart HR Portal System</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">K-Group Portal System</span>
             </div>
           </div>
 
@@ -370,7 +426,15 @@ const App: React.FC = () => {
           {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
           {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
-          {currentView === 'NOTICE_BOARD' && <NoticeBoard user={user} externalSelectedNotice={noticeToViewInBoard} />}
+          {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
+          {currentView === 'NOTICE_BOARD' && (
+            <NoticeBoard
+              user={user}
+              externalSelectedNotice={noticeToViewInBoard}
+              notices={allNotices}
+              onNoticesChange={setAllNotices}
+            />
+          )}
         </div>
 
       </main>

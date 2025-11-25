@@ -17,10 +17,10 @@ export const SYSTEM_PERSONA = `
 // [개발 연동 주석]: 연동된 문서 목록 및 내용 (Mock RAG Data)
 // 실제 환경에서는 Vector DB (Pinecone 등)에 저장된 Embedding 데이터를 검색해야 합니다.
 export const REFERENCE_DOCS: ReferenceDoc[] = [
-  { 
-    id: '1', 
-    title: '2025년도 취업규칙_한일후지코리아.pdf', 
-    type: 'PDF', 
+  {
+    id: '1',
+    title: '2025년도 취업규칙_한일후지코리아.pdf',
+    type: 'PDF',
     lastUpdated: '2025-01-02',
     keywords: ['근무', '시간', '유연', '재택', '휴가', '연차', '반차', '출근', '퇴근', '지각', '조퇴'],
     content: `
@@ -40,10 +40,10 @@ export const REFERENCE_DOCS: ReferenceDoc[] = [
 4. 경조사 휴가: 본인 결혼(5일), 형제자매 결혼(1일), 부모상(5일), 조부모상(3일).
     `
   },
-  { 
-    id: '2', 
-    title: '복리후생 가이드북 v3.0', 
-    type: 'DOC', 
+  {
+    id: '2',
+    title: '복리후생 가이드북 v3.0',
+    type: 'DOC',
     lastUpdated: '2024-12-15',
     keywords: ['식대', '밥', '점심', '버스', '통근', '셔틀', '학자금', '의료비', '보험', '복지', '돈'],
     content: `
@@ -65,10 +65,10 @@ export const REFERENCE_DOCS: ReferenceDoc[] = [
    - 연 1회 종합 건강검진 무료 제공 (배우자 포함).
     `
   },
-  { 
-    id: '3', 
-    title: '인사평가 매뉴얼 (관리자용)', 
-    type: 'NOTION', 
+  {
+    id: '3',
+    title: '인사평가 매뉴얼 (관리자용)',
+    type: 'NOTION',
     lastUpdated: '2024-11-30',
     keywords: ['평가', '승진', '진급', '연봉', '협상', '고가', '성과'],
     content: `
@@ -82,10 +82,10 @@ export const REFERENCE_DOCS: ReferenceDoc[] = [
    - 등급별 인상률 가이드: S등급(10% 이상), A등급(7%), B등급(4%), C등급(동결).
     `
   },
-  { 
-    id: '4', 
-    title: '정보보안 서약서', 
-    type: 'PDF', 
+  {
+    id: '4',
+    title: '정보보안 서약서',
+    type: 'PDF',
     lastUpdated: '2024-08-10',
     keywords: ['보안', '사진', '촬영', '카메라', '외부', '유출', '메일', '반출', 'usb'],
     content: `
@@ -99,10 +99,10 @@ export const REFERENCE_DOCS: ReferenceDoc[] = [
    - 출력물은 반드시 파쇄기를 이용하여 폐기.
     `
   },
-  { 
-    id: '5', 
-    title: '신입사원 OJT 교육자료', 
-    type: 'PDF', 
+  {
+    id: '5',
+    title: '신입사원 OJT 교육자료',
+    type: 'PDF',
     lastUpdated: '2025-02-01',
     keywords: ['신입', '교육', 'ojt', '멘토', '수습'],
     content: `
@@ -120,48 +120,7 @@ export const REFERENCE_DOCS: ReferenceDoc[] = [
 ];
 
 // [개발 연동 주석]: 최신 공지사항 Mock Data (필독 공지용)
-export const LATEST_NOTICE: Notice = {
-  id: 'notice-menu-2025-02-10', 
-  title: '2월 2주차 주간 식단표 업데이트',
-  content: '임직원 여러분, 2월 2주차 구내식당 주간 식단표가 업로드되었습니다.\n\n이번 주는 발렌타인데이를 맞아 금요일에 특식 메뉴가 제공될 예정이오니 많은 이용 바랍니다.\n자세한 내용은 [금주의 식단] 메뉴에서 확인하실 수 있습니다.',
-  date: '2025-02-10',
-  type: 'MENU',
-  author: '인사총무팀'
-};
+export const LATEST_NOTICE: Notice | null = null;
 
 // [개발 연동 주석]: 전체 공지사항 목록 Mock Data
-export const NOTICE_LIST: Notice[] = [
-  LATEST_NOTICE,
-  {
-    id: 'notice-gen-2025-02-01',
-    title: '2025년 상반기 정기 인사발령 안내',
-    content: '2025년도 상반기 정기 인사발령 내용을 공지합니다.\n발령일자: 2025년 2월 1일부\n\n상세 발령 내역은 사내 인트라넷 인사정보 시스템을 확인하시기 바랍니다.\n승진 및 영전하신 모든 임직원 여러분 축하드립니다.',
-    date: '2025-02-01',
-    type: 'MUST_READ',
-    author: '인사팀'
-  },
-  {
-    id: 'notice-gen-2025-01-25',
-    title: '설 명절 선물 세트 신청 안내',
-    content: '임직원 여러분의 노고에 감사드립니다.\n2025년 설 명절을 맞이하여 선물 세트 신청을 받습니다.\n\n신청 기간: 1월 25일 ~ 1월 30일\n배송 예정일: 2월 5일부터 순차 배송\n\n* 미신청 시 B세트(스팸/참치)로 일괄 배송됩니다.',
-    date: '2025-01-25',
-    type: 'GENERAL',
-    author: '총무팀'
-  },
-  {
-    id: 'notice-sec-2025-01-10',
-    title: '[보안] 윈도우 업데이트 및 백신 검사 시행 협조',
-    content: '최근 랜섬웨어 피해 사례가 증가함에 따라 사내 PC 보안 점검을 실시합니다.\n\n모든 임직원은 퇴근 전 반드시 윈도우 업데이트를 확인하고, V3 정밀 검사를 수행해주시기 바랍니다.\n\n협조해주셔서 감사합니다.',
-    date: '2025-01-10',
-    type: 'MUST_READ',
-    author: 'IT운영팀'
-  },
-  {
-    id: 'notice-club-2024-12-20',
-    title: '2025년도 사내 동호회 신규 개설 및 지원금 안내',
-    content: '활기찬 조직 문화 조성을 위해 2025년도 사내 동호회를 모집합니다.\n\n신규 개설 조건: 회원 10명 이상\n지원금: 인당 월 2만원\n\n관심 있는 임직원분들의 많은 참여 바랍니다.',
-    date: '2024-12-20',
-    type: 'GENERAL',
-    author: '기업문화TF'
-  }
-];
+export const NOTICE_LIST: Notice[] = [];

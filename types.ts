@@ -44,7 +44,7 @@ export interface Notice {
   title: string;
   content: string;
   date: string;
-  type: 'MUST_READ' | 'GENERAL' | 'MENU';
+  type: string;
   author?: string; // 작성자 필드 추가
 }
 
