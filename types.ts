@@ -27,6 +27,8 @@ export interface UserProfile {
   companyName: string;
   role: UserRole;
   birthDate?: string; // YYMMDD (바이오리듬용)
+  customNickname?: string; // 사용자 지정 닉네임
+  customAvatarUrl?: string; // 사용자 지정 아바타
 }
 
 export interface ReferenceDoc {
@@ -85,11 +87,21 @@ export interface OrgNode {
 }
 
 // Navigation State
-export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT';
+export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE';
 
 export interface MenuItem {
   id: ViewPage;
   label: string;
   icon?: React.ReactNode; // Icon is optional for custom added items
   isCustom?: boolean; // Flag to identify custom added items
+}
+
+// Attendance Record
+export interface AttendanceRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userDepartment?: string; // 직원 부서/팀
+  checkInTime: string; // ISO string
+  date: string; // YYYY-MM-DD
 }

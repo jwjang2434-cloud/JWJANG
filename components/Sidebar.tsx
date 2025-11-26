@@ -9,7 +9,6 @@ interface SidebarProps {
   activeView: ViewPage;
   user: UserProfile;
   onLogout: () => void;
-  onOpenSettings: () => void;
   onOpenDocument: (doc: ReferenceDoc) => void;
   onOpenNotice: (notice: Notice) => void;
   menuItems: MenuItem[];
@@ -24,7 +23,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   user,
   onLogout,
-  onOpenSettings,
   onOpenDocument,
   onOpenNotice,
   menuItems,
@@ -104,10 +102,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* User Profile */}
         <div className="px-4 mb-3">
           <div className="relative z-20 p-3 bg-slate-800/50 rounded-xl flex items-center gap-3 border border-slate-700/50 backdrop-blur-sm">
-            <img src={user.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/30" />
+            <img src={user.customAvatarUrl || user.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/30" />
             <div className="overflow-hidden flex-1">
               <div className="flex items-center gap-1 mb-0.5">
-                <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                <p className="text-sm font-medium text-white truncate">{user.customNickname || user.name}</p>
                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${isAdmin
                   ? 'bg-red-500/10 text-red-400 border-red-500/20'
                   : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
@@ -119,14 +117,70 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
             {/* BioRhythm passes user birthdate */}
             <BioRhythm birthDate={user.birthDate} />
-            <button
-              onClick={onOpenSettings}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors flex-shrink-0"
-              title="개인 설정"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
           </div>
+        </div>
+
+        {/* Attendance Check-in Button (출근하기) */}
+        <div className="px-4 mb-3">
+          <button
+            onClick={() => {
+              const stored = localStorage.getItem('attendance_records');
+              const allRecords = stored ? JSON.parse(stored) : [];
+              const today = new Date().toISOString().split('T')[0];
+              const todayRecord = allRecords.find((r: any) => r.userId === user.id && r.date === today);
+
+              if (todayRecord) {
+                alert('오늘은 이미 출근하셨습니다.');
+                return;
+              }
+
+              const now = new Date();
+              const record = {
+                id: `${user.id}_${now.getTime()}`,
+                userId: user.id,
+                userName: user.customNickname || user.name,
+                userDepartment: user.department,
+                checkInTime: now.toISOString(),
+                date: today
+              };
+
+              allRecords.push(record);
+              localStorage.setItem('attendance_records', JSON.stringify(allRecords));
+
+              // 출근 완료 팝업 표시
+              const popup = document.createElement('div');
+              popup.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in';
+              popup.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-sm w-full border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+                  <div class="text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                      <svg class="h-10 w-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">출근 완료!</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-1">출근 시간</p>
+                    <p class="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}</p>
+                    <button onclick="this.closest('.fixed').remove()" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors">
+                      확인
+                    </button>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(popup);
+
+              // 3초 후 자동 닫기
+              setTimeout(() => {
+                if (popup.parentNode) {
+                  popup.remove();
+                }
+              }, 3000);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group bg-gradient-to-r from-green-600 to-emerald-600 text-white border-green-500 shadow-md hover:from-green-700 hover:to-emerald-700"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span className="font-bold text-sm">출근하기</span>
+          </button>
         </div>
 
         {/* Notice Board Button (공지사항) */}
@@ -169,37 +223,50 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Reorderable Menu Items */}
           <div className="space-y-1 pb-4">
-            {menuItems.map((item, index) => (
-              <div key={item.id} className={`flex items-center gap-1 group/item ${isReordering ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700' : ''}`}>
-                {isReordering && (
-                  <div className="flex flex-col gap-0.5 px-1">
-                    <button
-                      onClick={() => handleMoveUp(index)}
-                      disabled={index === 0}
-                      className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg>
-                    </button>
-                    <button
-                      onClick={() => handleMoveDown(index)}
-                      disabled={index === menuItems.length - 1}
-                      className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                  </div>
-                )}
-                <button
-                  onClick={() => !isReordering && onNavigate(item.id)}
-                  className={getButtonClass(item.id)}
-                  disabled={isReordering}
-                >
-                  {item.icon}
-                  <span className="text-sm font-medium">{item.label}</span>
-                  {isReordering && <span className="ml-auto text-xs text-slate-600">≡</span>}
-                </button>
-              </div>
-            ))}
+            {menuItems
+              .filter(item => {
+                // 관리자 전용 메뉴는 관리자만 볼 수 있음
+                if (item.id === 'ADMIN_ATTENDANCE') {
+                  return isAdmin;
+                }
+                return true;
+              })
+              .map((item, index) => (
+                <div key={item.id} className={`flex items-center gap-1 group/item ${isReordering ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700' : ''}`}>
+                  {isReordering && (
+                    <div className="flex flex-col gap-0.5 px-1">
+                      <button
+                        onClick={() => handleMoveUp(index)}
+                        disabled={index === 0}
+                        className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg>
+                      </button>
+                      <button
+                        onClick={() => handleMoveDown(index)}
+                        disabled={index === menuItems.length - 1}
+                        className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => !isReordering && onNavigate(item.id)}
+                    className={getButtonClass(item.id)}
+                    disabled={isReordering}
+                  >
+                    {item.icon}
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {item.id === 'ADMIN_ATTENDANCE' && (
+                      <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded border border-red-500/30">
+                        관리자
+                      </span>
+                    )}
+                    {isReordering && <span className="ml-auto text-xs text-slate-600">≡</span>}
+                  </button>
+                </div>
+              ))}
           </div>
 
           <div className="py-2">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, UserRole } from '../types';
+import { COMMUTER_ROUTES } from '../constants';
 
 interface Station {
     name: string;
@@ -21,56 +22,8 @@ interface CommuterBusProps {
 }
 
 const CommuterBus: React.FC<CommuterBusProps> = ({ user }) => {
-    const initialRoutes: BusRoute[] = [
-        {
-            id: 'route-1',
-            name: '1호차 (문현)',
-            driverName: '김문현',
-            driverPhone: '010-1111-2222',
-            stations: [
-                { name: '문현역 3번출구', time: '07:10', locationDesc: '3번출구 앞 편의점' },
-                { name: '서면역 12번출구', time: '07:25', locationDesc: '신한은행 앞' },
-                { name: '가야 홈플러스', time: '07:40', locationDesc: '육교 아래' },
-                { name: '회사 도착', time: '08:30', locationDesc: '본관 정문' },
-            ]
-        },
-        {
-            id: 'route-2',
-            name: '2호차 (시청)',
-            driverName: '이시청',
-            driverPhone: '010-3333-4444',
-            stations: [
-                { name: '부산시청역', time: '07:15', locationDesc: '시청 공영주차장 입구' },
-                { name: '연산역', time: '07:25', locationDesc: '5번 출구' },
-                { name: '동래역', time: '07:40', locationDesc: '내성교차로' },
-                { name: '회사 도착', time: '08:30', locationDesc: '본관 정문' },
-            ]
-        },
-        {
-            id: 'route-3',
-            name: '3호차 (창원/신항)',
-            driverName: '박창원',
-            driverPhone: '010-5555-6666',
-            stations: [
-                { name: '창원광장', time: '07:00', locationDesc: '롯데마트 앞' },
-                { name: '진해구청', time: '07:30', locationDesc: '민원실 앞' },
-                { name: '용원', time: '07:50', locationDesc: '하나로마트 건너편' },
-                { name: '회사 도착', time: '08:30', locationDesc: '본관 정문' },
-            ]
-        },
-        {
-            id: 'route-4',
-            name: '4호차 (명지)',
-            driverName: '최명지',
-            driverPhone: '010-7777-8888',
-            stations: [
-                { name: '명지 국제신도시', time: '07:40', locationDesc: '맥도날드 앞' },
-                { name: '오션시티', time: '07:55', locationDesc: '행복복지센터' },
-                { name: '신호동', time: '08:10', locationDesc: '부영아파트 1단지' },
-                { name: '회사 도착', time: '08:30', locationDesc: '본관 정문' },
-            ]
-        }
-    ];
+    // constants.ts에서 가져온 통근버스 노선 데이터 사용
+    const initialRoutes: BusRoute[] = COMMUTER_ROUTES;
 
     // LocalStorage에서 데이터 불러오기 (저장된 값이 없으면 초기값 사용)
     const [routes, setRoutes] = useState<BusRoute[]>(() => {
