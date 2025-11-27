@@ -1,21 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, UserRole } from '../types';
+import { UserProfile, UserRole, BusRoute, Station } from '../types';
 import { COMMUTER_ROUTES } from '../constants';
-
-interface Station {
-    name: string;
-    time: string;
-    locationDesc: string;
-    stationImage?: string; // Base64 image string
-}
-
-interface BusRoute {
-    id: string;
-    name: string;
-    driverName: string;
-    driverPhone: string;
-    stations: Station[];
-}
+import { db } from '../services/db';
 
 interface CommuterBusProps {
     user?: UserProfile;
@@ -26,10 +12,46 @@ const CommuterBus: React.FC<CommuterBusProps> = ({ user }) => {
     const initialRoutes: BusRoute[] = COMMUTER_ROUTES;
 
     // LocalStorage에서 데이터 불러오기 (저장된 값이 없으면 초기값 사용)
-    const [routes, setRoutes] = useState<BusRoute[]>(() => {
-        const saved = localStorage.getItem('commuterRoutes');
-        return saved ? JSON.parse(saved) : initialRoutes;
-    });
+    const [routes, setRoutes] = useState<BusRoute[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                await db.init();
+                const dbRoutes = await db.getAllRoutes();
+
+                if (dbRoutes.length > 0) {
+                    setRoutes(dbRoutes);
+                } else {
+                    // Migration: Check localStorage
+                    const saved = localStorage.getItem('commuterRoutes');
+                    if (saved) {
+                        try {
+                            const localRoutes = JSON.parse(saved);
+                            await db.saveRoutes(localRoutes);
+                            setRoutes(localRoutes);
+                            // Optional: Clear localStorage after successful migration
+                            localStorage.removeItem('commuterRoutes');
+                            console.log('Migrated data from LocalStorage to IndexedDB');
+                        } catch (e) {
+                            console.error('Migration failed:', e);
+                            setRoutes(initialRoutes);
+                        }
+                    } else {
+                        // Initial load
+                        setRoutes(initialRoutes);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                setRoutes(initialRoutes);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
 
     const [activeTabId, setActiveTabId] = useState<string>(routes[0]?.id || '');
     const [isEditing, setIsEditing] = useState(false);
@@ -95,34 +117,16 @@ ${routesCode}
     };
 
     const handleSave = async () => {
-        // 저장 시 LocalStorage에 업데이트
-        localStorage.setItem('commuterRoutes', JSON.stringify(routes));
-
-        // TypeScript 코드 생성
-        const code = generateTypeScriptCode(routes);
-
+        // 저장 시 IndexedDB에 업데이트
         try {
-            // 백엔드 API 호출 - constants.ts 파일 자동 저장
-            const response = await fetch('/api/save-routes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert('✅ 노선 정보가 저장되고 constants.ts 파일이 자동으로 업데이트되었습니다!');
-            } else {
-                throw new Error(result.error || 'Failed to save');
-            }
+            await db.saveRoutes(routes);
+            alert('✅ 노선 정보가 저장되었습니다!');
+            setIsEditing(false);
+            setOpenTooltipIndex(null);
         } catch (error) {
-            console.error('파일 자동 저장 실패:', error);
-            alert('⚠️ constants.ts 파일 자동 저장에 실패했습니다. localStorage에는 저장되었습니다.');
+            console.error('Failed to save routes:', error);
+            alert('저장 중 오류가 발생했습니다.');
         }
-
-        setIsEditing(false);
-        setOpenTooltipIndex(null);
     };
 
     // 노선 추가/삭제/수정 핸들러들
@@ -139,12 +143,12 @@ ${routesCode}
         setActiveTabId(newId);
     };
 
-    const handleDeleteRoute = (e: React.MouseEvent, id: string) => {
+    const handleDeleteRoute = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         if (confirm('정말 이 노선을 삭제하시겠습니까?')) {
             const newRoutes = routes.filter(r => r.id !== id);
             setRoutes(newRoutes);
-            localStorage.setItem('commuterRoutes', JSON.stringify(newRoutes));
+            await db.saveRoutes(newRoutes);
         }
     };
 
@@ -177,20 +181,59 @@ ${routesCode}
     };
 
     // 이미지 업로드 핸들러
-    const handleImageUpload = (idx: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    // 이미지 압축 함수
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Resize if image is too large (max width: 800px)
+                    const maxWidth = 800;
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject(new Error('Failed to get canvas context'));
+                        return;
+                    }
+
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to JPEG with 0.5 quality to reduce size significantly
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                    resolve(compressedBase64);
+                };
+                img.onerror = reject;
+                img.src = e.target?.result as string;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // 이미지 업로드 핸들러
+    const handleImageUpload = async (idx: number, event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (file.size > 500 * 1024) { // 500KB 제한
-                alert('이미지 크기는 500KB 이하여야 합니다.');
-                return;
+            try {
+                // 압축 적용 (500KB 제한 제거)
+                const compressedBase64 = await compressImage(file);
+                handleUpdateStation(idx, 'stationImage', compressedBase64);
+            } catch (error) {
+                console.error('Image upload failed:', error);
+                alert('이미지 처리 중 오류가 발생했습니다.');
             }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                handleUpdateStation(idx, 'stationImage', base64String);
-            };
-            reader.readAsDataURL(file);
         }
     };
 
@@ -203,6 +246,19 @@ ${routesCode}
 
     const handleToggleTooltip = (idx: number) => {
         setOpenTooltipIndex(prev => prev === idx ? null : idx);
+    };
+
+    // 모든 이미지 삭제 (용량 확보용)
+    const handleClearImages = async () => {
+        if (confirm('저장 공간 확보를 위해 모든 정류장 사진을 삭제하시겠습니까?\n(노선 정보는 유지됩니다.)')) {
+            const newRoutes = routes.map(route => ({
+                ...route,
+                stations: route.stations.map(station => ({ ...station, stationImage: undefined }))
+            }));
+            setRoutes(newRoutes);
+            await db.saveRoutes(newRoutes);
+            alert('모든 사진이 삭제되었습니다. 이제 새로운 사진을 등록할 수 있습니다.');
+        }
     };
 
     return (
@@ -240,9 +296,14 @@ ${routesCode}
                     {isAdmin && (
                         <div className="flex gap-2">
                             {isEditing ? (
-                                <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md">
-                                    저장 완료
-                                </button>
+                                <>
+                                    <button onClick={handleClearImages} className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-bold transition-colors">
+                                        사진 전체 삭제
+                                    </button>
+                                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md">
+                                        저장 완료
+                                    </button>
+                                </>
                             ) : (
                                 <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md">
                                     노선 편집
