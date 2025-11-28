@@ -148,60 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Attendance Check-in Button (출근하기) */}
-        <div className="px-4 mb-3">
-          <button
-            onClick={async () => {
-              const now = new Date();
-              const year = now.getFullYear();
-              const month = String(now.getMonth() + 1).padStart(2, '0');
-              const day = String(now.getDate()).padStart(2, '0');
-              const dateStr = `${year}-${month}-${day}`;
 
-              const record: AttendanceRecord = {
-                id: `${user.id}_${now.getTime()}`,
-                userId: user.id,
-                userName: user.name,
-                userDepartment: user.department,
-                checkInTime: now.toISOString(),
-                date: dateStr
-              };
-
-              onAttendanceCheckIn(record);
-
-              const popup = document.createElement('div');
-              popup.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in';
-              popup.innerHTML = `
-                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-sm w-full border border-slate-200 dark:border-slate-800 animate-fade-in-up">
-                  <div class="text-center">
-                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
-                      <svg class="h-10 w-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">출근 완료!</h3>
-                    <p class="text-slate-600 dark:text-slate-400 mb-1">출근 시간</p>
-                    <p class="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}</p>
-                    <button onclick="this.closest('.fixed').remove()" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors">
-                      확인
-                    </button>
-                  </div>
-                </div>
-              `;
-              document.body.appendChild(popup);
-
-              setTimeout(() => {
-                if (popup.parentNode) {
-                  popup.remove();
-                }
-              }, 3000);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group bg-gradient-to-r from-green-600 to-emerald-600 text-white border-green-500 shadow-md hover:from-green-700 hover:to-emerald-700"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span className="font-bold text-sm">출근하기</span>
-          </button>
-        </div>
 
         {/* Notice Board Button (공지사항) */}
         <div className="px-4 mb-4">
