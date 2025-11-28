@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, UserRole } from '../types';
 
@@ -27,22 +26,21 @@ interface Booking {
 // 예약 확인용 모달 상태 인터페이스
 interface ReservationModalState {
   isOpen: boolean;
-  type: 'BOOK' | 'CANCEL' | 'ADMIN_CANCEL';
+  type: 'BOOK' | 'CANCEL' | 'ADMIN_CANCEL' | 'INFO';
   roomId: string;
   roomName: string;
   time: string;
   bookingId?: string; // 취소 시 필요
   targetUserName?: string; // 관리자 취소 시 표시용
+  bookingDetails?: Booking; // 상세 정보 표시용
 }
 
 const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
   // 초기 회의실 데이터
   const initialRooms: Room[] = [
-    { id: 'r1', name: '대회의실 (A동 301호)', capacity: 20 },
-    { id: 'r2', name: '중회의실 (A동 302호)', capacity: 10 },
-    { id: 'r3', name: '소회의실 A (B동 101호)', capacity: 6 },
-    { id: 'r4', name: '소회의실 B (B동 102호)', capacity: 6 },
-    { id: 'r5', name: '화상회의실 (본관 2층)', capacity: 8 }
+    { id: 'r1', name: '대회의실', capacity: 20 },
+    { id: 'r2', name: '중회의실', capacity: 10 },
+    { id: 'r3', name: '소회의실', capacity: 6 }
   ];
 
   const times = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
@@ -64,21 +62,21 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
   // State
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // [수정] LocalStorage에서 데이터 로드
+  // [수정] LocalStorage에서 데이터 로드 (v2로 변경하여 초기화)
   const [rooms, setRooms] = useState<Room[]>(() => {
-    const saved = localStorage.getItem('meetingRooms');
+    const saved = localStorage.getItem('meetingRooms_v2');
     return saved ? JSON.parse(saved) : initialRooms;
   });
 
   const [bookings, setBookings] = useState<Booking[]>(() => {
-    const saved = localStorage.getItem('meetingBookings');
+    const saved = localStorage.getItem('meetingBookings_v2');
     // 초기 실행 시 데이터가 없으면 Mock Data 생성
     if (!saved) {
       const todayStr = new Date().toISOString().split('T')[0];
       return [
-        { id: 'b1', roomId: 'r1', date: todayStr, time: '10:00', userId: 'other1', userName: '박팀장', department: '영업팀' },
-        { id: 'b2', roomId: 'r2', date: todayStr, time: '14:00', userId: 'other2', userName: '김대리', department: '개발팀' },
-        { id: 'b3', roomId: 'r3', date: todayStr, time: '09:00', userId: 'other3', userName: '최사원', department: '인사팀' },
+        { id: 'b1', roomId: 'r1', date: todayStr, time: '10:00', userId: 'other1', userName: '박팀장', department: '영업팀', purpose: '주간 회의', endTime: '11:00' },
+        { id: 'b2', roomId: 'r2', date: todayStr, time: '14:00', userId: 'other2', userName: '김대리', department: '개발팀', purpose: '코드 리뷰', endTime: '15:00' },
+        { id: 'b3', roomId: 'r3', date: todayStr, time: '09:00', userId: 'other3', userName: '최사원', department: '인사팀', purpose: '면접', endTime: '10:00' },
       ];
     }
     return JSON.parse(saved);
@@ -103,11 +101,11 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
 
   // [수정] 데이터 변경 시 LocalStorage 저장
   useEffect(() => {
-    localStorage.setItem('meetingRooms', JSON.stringify(rooms));
+    localStorage.setItem('meetingRooms_v2', JSON.stringify(rooms));
   }, [rooms]);
 
   useEffect(() => {
-    localStorage.setItem('meetingBookings', JSON.stringify(bookings));
+    localStorage.setItem('meetingBookings_v2', JSON.stringify(bookings));
   }, [bookings]);
 
   // --- Time Validation Logic ---
@@ -183,14 +181,14 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
       return;
     }
 
-    if (isPast) return;
+    // 과거 예약이라도 상세 정보는 볼 수 있게 함
 
-    // 현재 날짜와 시간에 맞는 예약 찾기
     const existingBooking = bookings.find(b => b.roomId === roomId && b.time === time && b.date === currentDateKey);
 
     if (existingBooking) {
       // 1) 내 예약 -> 취소 모달
       if (existingBooking.userId === user.id) {
+        if (isPast) return; // 과거 내 예약은 취소 불가
         setModalState({
           isOpen: true,
           type: 'CANCEL',
@@ -202,6 +200,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
       }
       // 2) 관리자 -> 강제 취소 모달
       else if (isAdmin) {
+        if (isPast) return; // 과거 예약 관리자 취소 불가
         setModalState({
           isOpen: true,
           type: 'ADMIN_CANCEL',
@@ -212,7 +211,20 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
           targetUserName: existingBooking.userName
         });
       }
+      // 3) 다른 사람 예약 -> 상세 정보 모달 (NEW)
+      else {
+        setModalState({
+          isOpen: true,
+          type: 'INFO',
+          roomId,
+          roomName,
+          time,
+          bookingDetails: existingBooking
+        });
+      }
     } else {
+      if (isPast) return; // 과거 빈 슬롯은 예약 불가
+
       // 빈 슬롯 -> 예약 모달
       // 폼 초기화
       setBookingForm({
@@ -302,7 +314,8 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModalState(null)}></div>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md p-6 relative z-10 border border-slate-200 dark:border-slate-800 animate-fade-in-up max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
-              {modalState.type === 'BOOK' ? '회의실 예약' : '예약 취소'}
+              {modalState.type === 'BOOK' ? '회의실 예약' :
+                modalState.type === 'INFO' ? '예약 상세 정보' : '예약 취소'}
             </h3>
             <div className="py-4 text-slate-600 dark:text-slate-300">
               <p className="mb-2 text-sm text-slate-500">{formatDateDisplay(currentDate)}</p>
@@ -372,6 +385,29 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
                     <p className="text-xs text-slate-500 mt-1">시작 시간부터 종료 시간까지 연속 예약됩니다</p>
                   </div>
                 </div>
+              ) : modalState.type === 'INFO' && modalState.bookingDetails ? (
+                <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">예약자</span>
+                    <p className="text-slate-800 dark:text-white font-medium">{modalState.bookingDetails.userName}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">부서/팀</span>
+                    <p className="text-slate-800 dark:text-white font-medium">{modalState.bookingDetails.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">회의 내용</span>
+                    <p className="text-slate-800 dark:text-white font-medium mt-1 whitespace-pre-wrap">
+                      {modalState.bookingDetails.purpose || '내용 없음'}
+                    </p>
+                  </div>
+                  {modalState.bookingDetails.endTime && (
+                    <div>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">종료 시간</span>
+                      <p className="text-slate-800 dark:text-white font-medium">{modalState.bookingDetails.endTime}</p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   {modalState.type === 'CANCEL' && <p>나의 예약을 취소하시겠습니까?</p>}
@@ -386,15 +422,17 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
               >
                 닫기
               </button>
-              <button
-                onClick={handleConfirmAction}
-                className={`flex-1 py-2 text-white rounded-lg font-bold shadow-md transition-colors ${modalState.type === 'BOOK'
+              {modalState.type !== 'INFO' && (
+                <button
+                  onClick={handleConfirmAction}
+                  className={`flex-1 py-2 text-white rounded-lg font-bold shadow-md transition-colors ${modalState.type === 'BOOK'
                     ? 'bg-indigo-600 hover:bg-indigo-700'
                     : 'bg-red-500 hover:bg-red-600'
-                  }`}
-              >
-                {modalState.type === 'BOOK' ? '예약 확정' : '취소 확정'}
-              </button>
+                    }`}
+                >
+                  {modalState.type === 'BOOK' ? '예약 확정' : '취소 확정'}
+                </button>
+              )}
             </div>
           </div>
         </div>

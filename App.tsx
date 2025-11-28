@@ -20,12 +20,14 @@ import PDFViewer from './components/PDFViewer';
 import NoticeBoard from './components/NoticeBoard';
 import AttendanceRecords from './components/AttendanceRecords';
 import AdminAttendance from './components/AdminAttendance';
+import AdminUserList from './components/AdminUserList';
 import { LATEST_NOTICE, NOTICE_LIST } from './constants';
 import DateTimeDisplay from './components/DateTimeDisplay';
-import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice, MenuItem } from './types';
+import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice, MenuItem, MenuCategory, AttendanceRecord } from './types';
 import MenuManagement from './components/MenuManagement';
 
 const App: React.FC = () => {
+  console.log("App.tsx: Rendering App component");
   // [개발 연동 주석]: 전역 상태 관리 (Redux, Recoil 등) 권장
   const [user, setUser] = useState<UserProfile | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,81 +84,131 @@ const App: React.FC = () => {
   // Theme State - Default to Dark
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
+  // System Online Status State
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Biorhythm State
   const [showBiorhythm, setShowBiorhythm] = useState(() => {
     return localStorage.getItem('showBiorhythm') !== 'false';
   });
 
   // Menu Items State
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([
+  const [menuItems, setMenuItems] = useState<MenuCategory[]>([
     {
-      id: 'MEETING',
-      label: '회의실 예약',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+      id: 'WORK_SUPPORT',
+      label: '업무 지원',
+      items: [
+        {
+          id: 'MEETING',
+          label: '회의실 예약',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        },
+        {
+          id: 'FORMS',
+          label: '신청서 작성',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        },
+        {
+          id: 'SUGGESTION',
+          label: '건의함',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+        }
+      ]
     },
     {
-      id: 'FORMS',
-      label: '신청서 작성',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      id: 'LIFE_SUPPORT',
+      label: '생활 지원',
+      items: [
+        {
+          id: 'MENU',
+          label: '주간 식단표',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        },
+        {
+          id: 'CAFE',
+          label: '사내 카페',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+        },
+        {
+          id: 'SNACK',
+          label: '간식 신청',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" /></svg>
+        },
+        {
+          id: 'BUS',
+          label: '통근버스',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+        }
+      ]
     },
     {
-      id: 'MENU',
-      label: '주간 식단표',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+      id: 'COMPANY_INFO',
+      label: '회사 정보',
+      items: [
+        {
+          id: 'NEWSLETTER',
+          label: '뉴스레터',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+        },
+        {
+          id: 'BROCHURE',
+          label: '회사 브로슈어',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        },
+        {
+          id: 'ORG_CHART',
+          label: '조직도',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+        },
+        {
+          id: 'REGULATIONS',
+          label: '사내 규정',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+        }
+      ]
     },
     {
-      id: 'CAFE',
-      label: '사내 카페',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-    },
-    {
-      id: 'SNACK',
-      label: '간식 신청',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" /></svg>
-    },
-    {
-      id: 'BUS',
-      label: '통근버스',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-    },
-    {
-      id: 'SUGGESTION',
-      label: '건의함',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
-    },
-    {
-      id: 'NEWSLETTER',
-      label: '뉴스레터',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
-    },
-    {
-      id: 'BROCHURE',
-      label: '회사 브로슈어',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-    },
-    {
-      id: 'ORG_CHART',
-      label: '조직도',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-    },
-    {
-      id: 'REGULATIONS',
-      label: '사내 규정',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
-    },
-    {
-      id: 'ATTENDANCE',
-      label: '출근 기록',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-    },
-    {
-      id: 'ADMIN_ATTENDANCE',
-      label: '전체 출근 관리',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+      id: 'ATTENDANCE_MANAGEMENT',
+      label: '근태 관리',
+      items: [
+        {
+          id: 'ATTENDANCE',
+          label: '출근 기록',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+        },
+        {
+          id: 'ADMIN_ATTENDANCE',
+          label: '전체 출근 관리',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+        },
+        {
+          id: 'ADMIN_USER_LIST',
+          label: '계정 관리',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+        },
+        {
+          id: 'MENU_MANAGEMENT',
+          label: '메뉴 관리',
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+        }
+      ]
     }
   ]);
 
-  const handleUpdateMenuItems = (newItems: MenuItem[]) => {
+  const handleUpdateMenuItems = (newItems: MenuCategory[]) => {
     setMenuItems(newItems);
   };
 
@@ -188,6 +240,29 @@ const App: React.FC = () => {
         setLlmConfig(JSON.parse(savedLlmConfig));
       } catch (e) {
         console.error("Failed to parse LLM config", e);
+      }
+    }
+
+    // Data Migration: Update company name for test1 if it's still the default
+    const storedUsers = localStorage.getItem('portal_users');
+    if (storedUsers) {
+      try {
+        const users = JSON.parse(storedUsers);
+        let updated = false;
+        const newUsers = users.map((u: any) => {
+          if (u.id === 'test1' && u.companyName === '한일후지코리아(주)') {
+            updated = true;
+            return { ...u, companyName: '(주)후지글로벌로지스틱' };
+          }
+          return u;
+        });
+
+        if (updated) {
+          localStorage.setItem('portal_users', JSON.stringify(newUsers));
+          console.log('Migrated user data: Updated test1 company name');
+        }
+      } catch (e) {
+        console.error('Migration failed', e);
       }
     }
   }, []);
@@ -304,6 +379,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return <Login onLogin={setUser} />;
+    // return <div style={{ color: 'white', padding: '20px', background: 'red' }}>Login Component Placeholder</div>;
   }
 
   return (
@@ -363,6 +439,16 @@ const App: React.FC = () => {
         menuItems={menuItems}
         onUpdateMenuItems={handleUpdateMenuItems}
         latestNotice={latestNotice}
+        onAttendanceCheckIn={(record) => {
+          console.log('Attendance Check-in:', record);
+          const stored = localStorage.getItem('attendance_records');
+          const allRecords: AttendanceRecord[] = stored ? JSON.parse(stored) : [];
+          allRecords.push(record);
+          localStorage.setItem('attendance_records', JSON.stringify(allRecords));
+
+          // Force refresh if looking at attendance page (optional, but good UX)
+          // For now, just saving is the priority.
+        }}
       />
 
       <main className="flex-1 flex flex-col relative h-full w-full overflow-hidden transition-all duration-300">
@@ -388,9 +474,12 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-3 lg:gap-4">
             {/* System Status Indicator (Desktop only) */}
-            <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-bold border border-green-100 dark:border-green-800/50 transition-colors">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-              System Online
+            <div className={`hidden xl:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border transition-colors ${isOnline
+              ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-800/50'
+              : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800/50'
+              }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+              {isOnline ? 'System Online' : 'System Offline'}
             </div>
 
             {/* Vertical Divider */}
@@ -475,9 +564,9 @@ const App: React.FC = () => {
           {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
           {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
-          {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
           {currentView === 'ATTENDANCE' && <AttendanceRecords user={user} />}
           {currentView === 'ADMIN_ATTENDANCE' && <AdminAttendance user={user} />}
+          {currentView === 'ADMIN_USER_LIST' && <AdminUserList user={user} />}
           {currentView === 'NOTICE_BOARD' && (
             <NoticeBoard
               user={user}

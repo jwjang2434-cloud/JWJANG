@@ -30,26 +30,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex overflow-hidden bg-slate-900">
-      {/* Left Side - Video Background (Hidden on mobile) */}
-      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden bg-slate-900">
-        {/* Text Area - Above Video */}
-        <div className="relative z-20 w-full pt-20 pb-10 px-10 text-center bg-slate-900">
-          <h2 className="text-4xl lg:text-5xl font-bold text-white drop-shadow-lg tracking-tight">Welcome to K-Group</h2>
-        </div>
-
-        {/* Video Area */}
-        <div className="flex-1 relative overflow-hidden rounded-tr-[4rem]">
+      {/* Left Side - Background (Hidden on mobile) */}
+      <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden bg-slate-900 p-12">
+        {/* Video Container */}
+        <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-slate-800/50">
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="absolute top-0 left-0 w-full h-full object-cover"
+            className="w-full h-full object-cover"
           >
-            <source src="/login_bg.mp4" type="video/mp4" />
+            <source src="/videos/login_bg.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
           </video>
-          {/* Overlay */}
-          <div className="absolute top-0 left-0 w-full h-full bg-black/20"></div>
+          {/* Subtle overlay for polish */}
+          <div className="absolute inset-0 bg-black/20"></div>
         </div>
       </div>
 
@@ -58,11 +54,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="w-full max-w-sm mx-auto">
           {/* Header Design */}
           <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-6 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-              <span className="text-white font-bold text-3xl">H</span>
+            <div className="w-24 h-24 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
+              <img
+                src="/images/fuji_flag.png"
+                alt="Hanil Fuji Korea Flag"
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">한일후지코리아(주)</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">K-Group Portal System</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">K-Group Portal System</p>
           </div>
 
           {/* Login Form */}

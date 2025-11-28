@@ -88,15 +88,31 @@ export interface OrgNode {
   employee?: Employee; // For MEMBER type nodes
   children?: OrgNode[];
 }
-
 // Navigation State
-export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE';
+export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE' | 'ADMIN_USER_LIST';
 
 export interface MenuItem {
   id: ViewPage;
   label: string;
-  icon?: React.ReactNode; // Icon is optional for custom added items
-  isCustom?: boolean; // Flag to identify custom added items
+  icon: React.ReactNode;
+}
+
+export interface MenuCategory {
+  id: string;
+  label: string;
+  items: MenuItem[];
+}
+
+// User Account Management
+export interface UserAccount {
+  id: string;
+  password: string; // In real app, this should be hashed
+  name: string;
+  department: string;
+  role: UserRole;
+  companyName: string;
+  avatarUrl?: string;
+  birthDate?: string;
 }
 
 // Attendance Record

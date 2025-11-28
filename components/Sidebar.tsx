@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { UserProfile, ViewPage, UserRole, ReferenceDoc, Notice, MenuItem } from '../types';
+import React, { useState, useEffect } from 'react';
+import { UserProfile, ViewPage, UserRole, ReferenceDoc, Notice, MenuItem, MenuCategory, AttendanceRecord } from '../types';
 import BioRhythm from './BioRhythm';
+import { getLocalIpAddress } from '../utils/networkUtils';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,9 +12,10 @@ interface SidebarProps {
   onLogout: () => void;
   onOpenDocument: (doc: ReferenceDoc) => void;
   onOpenNotice: (notice: Notice) => void;
-  menuItems: MenuItem[];
-  onUpdateMenuItems: (newItems: MenuItem[]) => void;
+  menuItems: MenuCategory[];
+  onUpdateMenuItems: (newItems: MenuCategory[]) => void;
   latestNotice: Notice | null;
+  onAttendanceCheckIn: (record: AttendanceRecord) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -27,32 +29,47 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenNotice,
   menuItems,
   onUpdateMenuItems,
-  latestNotice
+  latestNotice,
+  onAttendanceCheckIn
 }) => {
-  const [isReordering, setIsReordering] = useState(false);
+  const [ipAddress, setIpAddress] = useState<string>('');
+  const [copyFeedback, setCopyFeedback] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  useEffect(() => {
+    getLocalIpAddress().then(ip => {
+      console.log('Resolved IP:', ip);
+      setIpAddress(ip);
+    });
+  }, []);
+
+  const handleCopyIp = () => {
+    if (!ipAddress) {
+      setCopyFeedback('Wait...');
+      setTimeout(() => setCopyFeedback(''), 1000);
+      return;
+    }
+    navigator.clipboard.writeText(ipAddress);
+    setCopyFeedback('Copied!');
+    setTimeout(() => setCopyFeedback(''), 2000);
+  };
 
   const isAdmin = user.role === UserRole.ADMIN;
-
-  const handleMoveUp = (index: number) => {
-    if (index <= 0) return;
-    const newItems = [...menuItems];
-    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
-    onUpdateMenuItems(newItems);
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index >= menuItems.length - 1) return;
-    const newItems = [...menuItems];
-    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
-    onUpdateMenuItems(newItems);
-  };
 
   const getButtonClass = (viewName: ViewPage) => {
     const isActive = activeView === viewName;
     return `w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
       ? 'bg-indigo-600 text-white font-medium shadow-md'
       : 'text-slate-400 hover:text-white hover:bg-slate-800'
-      } ${isReordering ? 'cursor-default opacity-80' : 'cursor-pointer'}`;
+      } cursor-pointer`;
   };
 
   return (
@@ -74,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div>
             <h1 className="text-white font-bold text-lg tracking-tight leading-none">InnoPortal</h1>
-            <p className="text-[10px] text-slate-500 mt-0.5">한일후지코리아(주)</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{user.companyName || '한일후지코리아(주)'}</p>
           </div>
         </div>
 
@@ -120,34 +137,38 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
+        {/* IP Address Display */}
+        <div className="px-4 mb-2 flex justify-center">
+          <button
+            onClick={handleCopyIp}
+            className="text-[10px] text-slate-500 font-mono bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/50 hover:bg-slate-700 hover:text-slate-300 transition-colors cursor-pointer min-w-[120px] text-center"
+            title="Click to copy IP"
+          >
+            {copyFeedback || (ipAddress ? `Internal IP: ${ipAddress}` : 'Internal IP: Checking...')}
+          </button>
+        </div>
+
         {/* Attendance Check-in Button (출근하기) */}
         <div className="px-4 mb-3">
           <button
-            onClick={() => {
-              const stored = localStorage.getItem('attendance_records');
-              const allRecords = stored ? JSON.parse(stored) : [];
-              const today = new Date().toISOString().split('T')[0];
-              const todayRecord = allRecords.find((r: any) => r.userId === user.id && r.date === today);
-
-              if (todayRecord) {
-                alert('오늘은 이미 출근하셨습니다.');
-                return;
-              }
-
+            onClick={async () => {
               const now = new Date();
-              const record = {
+              const year = now.getFullYear();
+              const month = String(now.getMonth() + 1).padStart(2, '0');
+              const day = String(now.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${day}`;
+
+              const record: AttendanceRecord = {
                 id: `${user.id}_${now.getTime()}`,
                 userId: user.id,
-                userName: user.customNickname || user.name,
+                userName: user.name,
                 userDepartment: user.department,
                 checkInTime: now.toISOString(),
-                date: today
+                date: dateStr
               };
 
-              allRecords.push(record);
-              localStorage.setItem('attendance_records', JSON.stringify(allRecords));
+              onAttendanceCheckIn(record);
 
-              // 출근 완료 팝업 표시
               const popup = document.createElement('div');
               popup.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in';
               popup.innerHTML = `
@@ -169,7 +190,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               `;
               document.body.appendChild(popup);
 
-              // 3초 후 자동 닫기
               setTimeout(() => {
                 if (popup.parentNode) {
                   popup.remove();
@@ -199,74 +219,57 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Links */}
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-          <div className="flex items-center justify-between mb-2 px-2">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Menu</div>
-            {isAdmin && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => onNavigate('MENU_MANAGEMENT')}
-                  className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${activeView === 'MENU_MANAGEMENT' ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-500 border-slate-700 hover:text-slate-300'}`}
-                  title="관리자: 메뉴 관리"
-                >
-                  메뉴관리
-                </button>
-                <button
-                  onClick={() => setIsReordering(!isReordering)}
-                  className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${isReordering ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-500 border-slate-700 hover:text-slate-300'}`}
-                  title="관리자: 메뉴 순서 변경 (전체 적용)"
-                >
-                  {isReordering ? '완료' : '순서설정'}
-                </button>
-              </div>
-            )}
-          </div>
 
-          {/* Reorderable Menu Items */}
-          <div className="space-y-1 pb-4">
-            {menuItems
-              .filter(item => {
-                // 관리자 전용 메뉴는 관리자만 볼 수 있음
-                if (item.id === 'ADMIN_ATTENDANCE') {
-                  return isAdmin;
-                }
-                return true;
-              })
-              .map((item, index) => (
-                <div key={item.id} className={`flex items-center gap-1 group/item ${isReordering ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700' : ''}`}>
-                  {isReordering && (
-                    <div className="flex flex-col gap-0.5 px-1">
-                      <button
-                        onClick={() => handleMoveUp(index)}
-                        disabled={index === 0}
-                        className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg>
-                      </button>
-                      <button
-                        onClick={() => handleMoveDown(index)}
-                        disabled={index === menuItems.length - 1}
-                        className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-500"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
-                      </button>
-                    </div>
-                  )}
+
+          {/* Categorized Menu Items */}
+          <div className="space-y-6 pb-4">
+            {menuItems.map((category) => {
+              const isExpanded = expandedCategories.includes(category.id);
+              return (
+                <div key={category.id}>
                   <button
-                    onClick={() => !isReordering && onNavigate(item.id)}
-                    className={getButtonClass(item.id)}
-                    disabled={isReordering}
+                    onClick={() => toggleCategory(category.id)}
+                    className="w-full flex items-center justify-between px-2 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-slate-300 transition-colors group"
                   >
-                    {item.icon}
-                    <span className="text-sm font-medium">{item.label}</span>
-                    {item.id === 'ADMIN_ATTENDANCE' && (
-                      <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded border border-red-500/30">
-                        관리자
-                      </span>
-                    )}
-                    {isReordering && <span className="ml-auto text-xs text-slate-600">≡</span>}
+                    <span>{category.label}</span>
+                    <svg
+                      className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
+                  <div className={`space-y-1 transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    {category.items
+                      .filter(item => {
+                        // 관리자 전용 메뉴는 관리자만 볼 수 있음
+                        if (item.id === 'ADMIN_ATTENDANCE' || item.id === 'ADMIN_USER_LIST') {
+                          return isAdmin;
+                        }
+                        return true;
+                      })
+                      .map((item) => (
+                        <div key={item.id} className="flex items-center gap-1 group/item">
+                          <button
+                            onClick={() => onNavigate(item.id)}
+                            className={getButtonClass(item.id)}
+                          >
+                            {item.icon}
+                            <span className="text-sm font-medium">{item.label}</span>
+                            {item.id === 'ADMIN_ATTENDANCE' && (
+                              <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded border border-red-500/30">
+                                관리자
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              ))}
+              );
+            })}
           </div>
 
           <div className="py-2">
@@ -286,7 +289,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             로그아웃
           </button>
         </div>
-      </aside>
+      </aside >
     </>
   );
 };
