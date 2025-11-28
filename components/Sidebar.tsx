@@ -91,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div>
             <h1 className="text-white font-bold text-lg tracking-tight leading-none">InnoPortal</h1>
-            <p className="text-[10px] text-slate-500 mt-0.5">한일후지코리아(주)</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{user.companyName || '한일후지코리아(주)'}</p>
           </div>
         </div>
 

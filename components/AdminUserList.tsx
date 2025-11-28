@@ -67,6 +67,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                     name: formData.name,
                     department: formData.department,
                     role: formData.role,
+                    companyName: formData.companyName,
                     birthDate: formData.birthDate
                 };
                 if (formData.password) {
@@ -123,7 +124,8 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
     const filteredUsers = users.filter(u =>
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.department.toLowerCase().includes(searchTerm.toLowerCase())
+        u.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -155,7 +157,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="이름, 아이디, 부서 검색..."
+                            placeholder="이름, 아이디, 부서, 회사 검색..."
                             className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -176,6 +178,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">사용자</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">아이디</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">소속 회사</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">부서</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">권한</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">관리</th>
@@ -199,11 +202,12 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.id}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.companyName}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.department}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${u.role === UserRole.ADMIN
-                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                                 }`}>
                                                 {u.role}
                                             </span>
@@ -284,6 +288,16 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
                                     placeholder="사용자 이름"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">소속 회사</label>
+                                <input
+                                    type="text"
+                                    value={formData.companyName}
+                                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="소속 회사명"
                                 />
                             </div>
                             <div>

@@ -18,7 +18,7 @@ const INITIAL_USERS: UserAccount[] = [
     name: '장진우 과장',
     department: '인사총무팀',
     role: UserRole.USER,
-    companyName: '한일후지코리아(주)',
+    companyName: '(주)후지글로벌로지스틱',
     avatarUrl: 'https://ui-avatars.com/api/?name=Jang&background=0D8ABC&color=fff',
     birthDate: '850505'
   },

@@ -242,6 +242,29 @@ const App: React.FC = () => {
         console.error("Failed to parse LLM config", e);
       }
     }
+
+    // Data Migration: Update company name for test1 if it's still the default
+    const storedUsers = localStorage.getItem('portal_users');
+    if (storedUsers) {
+      try {
+        const users = JSON.parse(storedUsers);
+        let updated = false;
+        const newUsers = users.map((u: any) => {
+          if (u.id === 'test1' && u.companyName === '한일후지코리아(주)') {
+            updated = true;
+            return { ...u, companyName: '(주)후지글로벌로지스틱' };
+          }
+          return u;
+        });
+
+        if (updated) {
+          localStorage.setItem('portal_users', JSON.stringify(newUsers));
+          console.log('Migrated user data: Updated test1 company name');
+        }
+      } catch (e) {
+        console.error('Migration failed', e);
+      }
+    }
   }, []);
 
   // Notice Popup Check Logic (Auto-show unread MUST_READ notices)

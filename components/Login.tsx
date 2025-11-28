@@ -54,11 +54,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="w-full max-w-sm mx-auto">
           {/* Header Design */}
           <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-6 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-              <span className="text-white font-bold text-3xl">H</span>
+            <div className="w-24 h-24 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
+              <img
+                src="/images/fuji_flag.png"
+                alt="Hanil Fuji Korea Flag"
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">한일후지코리아(주)</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">K-Group Portal System</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">K-Group Portal System</p>
           </div>
 
           {/* Login Form */}
