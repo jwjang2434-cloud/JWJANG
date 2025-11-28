@@ -114,3 +114,18 @@ export interface AttendanceRecord {
   date: string; // YYYY-MM-DD
 }
 
+// Commuter Bus Types
+export interface Station {
+  name: string;
+  time: string;
+  locationDesc: string;
+  stationImage?: string; // Base64 image string
+}
+
+export interface BusRoute {
+  id: string;
+  name: string;
+  driverName: string;
+  driverPhone: string;
+  stations: Station[];
+}
