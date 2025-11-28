@@ -31,16 +31,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex overflow-hidden bg-slate-900">
       {/* Left Side - Background (Hidden on mobile) */}
-      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-black">
-        {/* Text Area */}
-        <div className="relative z-20 w-full pt-20 pb-10 px-10 text-center">
-          <h2 className="text-4xl lg:text-5xl font-bold text-white drop-shadow-lg tracking-tight">Welcome to K-Group</h2>
-        </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden bg-slate-900 p-12">
+        {/* Video Container */}
+        <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-slate-800/50">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          >
+            <source src="/videos/login_bg.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          {/* Subtle overlay for polish */}
+          <div className="absolute inset-0 bg-black/20"></div>
         </div>
       </div>
 
