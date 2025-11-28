@@ -30,26 +30,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex overflow-hidden bg-slate-900">
-      {/* Left Side - Video Background (Hidden on mobile) */}
-      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden bg-slate-900">
-        {/* Text Area - Above Video */}
-        <div className="relative z-20 w-full pt-20 pb-10 px-10 text-center bg-slate-900">
+      {/* Left Side - Background (Hidden on mobile) */}
+      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-black">
+        {/* Text Area */}
+        <div className="relative z-20 w-full pt-20 pb-10 px-10 text-center">
           <h2 className="text-4xl lg:text-5xl font-bold text-white drop-shadow-lg tracking-tight">Welcome to K-Group</h2>
         </div>
 
-        {/* Video Area */}
-        <div className="flex-1 relative overflow-hidden rounded-tr-[4rem]">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute top-0 left-0 w-full h-full object-cover"
-          >
-            <source src="/login_bg.mp4" type="video/mp4" />
-          </video>
-          {/* Overlay */}
-          <div className="absolute top-0 left-0 w-full h-full bg-black/20"></div>
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
       </div>
 

@@ -77,23 +77,31 @@ export interface Employee {
 }
 
 // Organization Chart Tree Node
-export interface OrgNode {
-  id: string;
-  name: string; // 부서명 or 직책
-  type: 'CEO' | 'DIVISION' | 'DEPARTMENT' | 'TEAM';
-  manager?: string; // 부서장/담당자 이름
-  managerId?: string; // Added managerId
-  children?: OrgNode[];
-}
-
 // Navigation State
-export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE';
+export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE' | 'ADMIN_USER_LIST';
 
 export interface MenuItem {
   id: ViewPage;
   label: string;
-  icon?: React.ReactNode; // Icon is optional for custom added items
-  isCustom?: boolean; // Flag to identify custom added items
+  icon: React.ReactNode;
+}
+
+export interface MenuCategory {
+  id: string;
+  label: string;
+  items: MenuItem[];
+}
+
+// User Account Management
+export interface UserAccount {
+  id: string;
+  password: string; // In real app, this should be hashed
+  name: string;
+  department: string;
+  role: UserRole;
+  companyName: string;
+  avatarUrl?: string;
+  birthDate?: string;
 }
 
 // Attendance Record
@@ -105,3 +113,4 @@ export interface AttendanceRecord {
   checkInTime: string; // ISO string
   date: string; // YYYY-MM-DD
 }
+

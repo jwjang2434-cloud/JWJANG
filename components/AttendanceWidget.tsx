@@ -44,19 +44,31 @@ const AttendanceWidget: React.FC<AttendanceWidgetProps> = ({ user }) => {
             return;
         }
 
+        console.log('handleCheckIn called');
         const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        console.log('Generated date string:', dateStr);
+
         const record: AttendanceRecord = {
             id: `${user.id}_${now.getTime()}`,
             userId: user.id,
             userName: user.customNickname || user.name,
             checkInTime: now.toISOString(),
-            date: now.toISOString().split('T')[0]
+            date: dateStr
         };
+        console.log('New record object:', record);
 
         const stored = localStorage.getItem('attendance_records');
+        console.log('Current stored records (raw):', stored);
         const allRecords: AttendanceRecord[] = stored ? JSON.parse(stored) : [];
         allRecords.push(record);
-        localStorage.setItem('attendance_records', JSON.stringify(allRecords));
+
+        const newStored = JSON.stringify(allRecords);
+        localStorage.setItem('attendance_records', newStored);
+        console.log('Saved records to localStorage:', newStored);
 
         setTodayRecord(record);
         loadAttendanceRecords();
@@ -127,8 +139,8 @@ const AttendanceWidget: React.FC<AttendanceWidgetProps> = ({ user }) => {
                         onClick={handleCheckIn}
                         disabled={!!todayRecord}
                         className={`flex-1 py-4 rounded-xl font-bold text-lg transition-all ${todayRecord
-                                ? 'bg-white/10 text-white/50 cursor-not-allowed'
-                                : 'bg-white text-indigo-600 hover:bg-indigo-50 hover:scale-105 shadow-lg'
+                            ? 'bg-white/10 text-white/50 cursor-not-allowed'
+                            : 'bg-white text-indigo-600 hover:bg-indigo-50 hover:scale-105 shadow-lg'
                             }`}
                     >
                         {todayRecord ? '출근 완료' : '출근하기'}

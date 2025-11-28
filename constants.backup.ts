@@ -1,5 +1,5 @@
 // 통근버스 노선 데이터
-// 생성 날짜: 2025. 11. 25. 오후 5:43:16
+// 생성 날짜: 2025. 11. 27. 오전 11:49:17
 
 import { ReferenceDoc, Notice } from './types';
 
@@ -25,7 +25,7 @@ export const COMMUTER_ROUTES: BusRoute[] = [
             driverName: '',
             driverPhone: '',
             stations: [
-                { name: '문현동 전철역', time: '07:14', locationDesc: '홍익빌레트 2,3 사이(문현역1번 3번 출구 사이)' },
+                { name: '문현동 전철역123', time: '07:14', locationDesc: '홍익빌레트 2,3 사이(문현역1번 3번 출구 사이)' },
                 { name: '부산진역', time: '07:18', locationDesc: '부산진역7번 출구' },
                 { name: '부산역', time: '07:25', locationDesc: '부산역 1번 출구' },
                 { name: '동대신 시장', time: '07:28', locationDesc: '마을버스 정류장(미진축산 앞)' },

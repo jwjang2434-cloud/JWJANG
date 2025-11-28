@@ -176,21 +176,53 @@ ${routesCode}
         setRoutes(routes.map(r => r.id === activeRoute.id ? { ...r, stations: newStations } : r));
     };
 
+    // 이미지 압축 함수
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // 최대 너비 800px로 제한
+                    const scaleSize = MAX_WIDTH / img.width;
+                    const width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                    const height = scaleSize < 1 ? img.height * scaleSize : img.height;
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    // JPEG 포맷, 품질 0.7로 압축
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(compressedBase64);
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
     // 이미지 업로드 핸들러
-    const handleImageUpload = (idx: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (idx: number, event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (file.size > 500 * 1024) { // 500KB 제한
-                alert('이미지 크기는 500KB 이하여야 합니다.');
+            if (file.size > 10 * 1024 * 1024) { // 10MB 제한
+                alert('이미지 크기는 10MB 이하여야 합니다.');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                handleUpdateStation(idx, 'stationImage', base64String);
-            };
-            reader.readAsDataURL(file);
+            try {
+                const compressedBase64 = await compressImage(file);
+                handleUpdateStation(idx, 'stationImage', compressedBase64);
+            } catch (error) {
+                console.error('Image compression failed:', error);
+                alert('이미지 처리 중 오류가 발생했습니다.');
+            }
         }
     };
 
@@ -199,6 +231,16 @@ ${routesCode}
         if (confirm('등록된 사진을 삭제하시겠습니까?')) {
             handleUpdateStation(idx, 'stationImage', '');
         }
+    };
+
+    const handleCopyData = () => {
+        const data = JSON.stringify(routes, null, 2);
+        navigator.clipboard.writeText(data).then(() => {
+            alert('✅ 데이터가 클립보드에 복사되었습니다!\n\n1. 프로젝트 폴더(JWJANG_GitHub_Clone)에 "bus_data.json" 파일을 새로 만드세요.\n2. 복사된 내용을 붙여넣고 저장하세요.\n3. 저에게 "파일 만들었어"라고 알려주세요.');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('복사에 실패했습니다. 수동으로 복사해주세요.');
+        });
     };
 
     const handleToggleTooltip = (idx: number) => {
@@ -239,6 +281,10 @@ ${routesCode}
                     </div>
                     {isAdmin && (
                         <div className="flex gap-2">
+                            <button onClick={handleCopyData} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                데이터 복사
+                            </button>
                             {isEditing ? (
                                 <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md">
                                     저장 완료
@@ -294,7 +340,7 @@ ${routesCode}
 
                 {/* Content */}
                 {activeRoute ? (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
                         {/* Driver Info */}
                         <div className="bg-indigo-50/50 dark:bg-indigo-900/20 p-6 border-b border-indigo-100 dark:border-indigo-900/50 flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-3">
@@ -422,7 +468,7 @@ ${routesCode}
                                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                                         </button>
                                                         {openTooltipIndex === idx && (
-                                                            <div className="absolute bottom-full right-0 mb-2 w-64 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-10 animate-fade-in-up">
+                                                            <div className="absolute bottom-full right-0 mb-2 w-64 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] animate-fade-in-up">
                                                                 {station.stationImage ? (
                                                                     <div
                                                                         className="w-full rounded overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
