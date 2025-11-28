@@ -182,18 +182,8 @@ const App: React.FC = () => {
     },
     {
       id: 'ATTENDANCE_MANAGEMENT',
-      label: '근태 관리',
+      label: '시스템 관리',
       items: [
-        {
-          id: 'ATTENDANCE',
-          label: '출근 기록',
-          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-        },
-        {
-          id: 'ADMIN_ATTENDANCE',
-          label: '전체 출근 관리',
-          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-        },
         {
           id: 'ADMIN_USER_LIST',
           label: '계정 관리',
@@ -564,8 +554,6 @@ const App: React.FC = () => {
           {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
           {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
-          {currentView === 'ATTENDANCE' && <AttendanceRecords user={user} />}
-          {currentView === 'ADMIN_ATTENDANCE' && <AdminAttendance user={user} />}
           {currentView === 'ADMIN_USER_LIST' && <AdminUserList user={user} />}
           {currentView === 'NOTICE_BOARD' && (
             <NoticeBoard
