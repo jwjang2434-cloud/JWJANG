@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Employee, UserProfile, UserRole, OrgNode } from '../types';
 import * as XLSX from 'xlsx';
 import BioRhythm from './BioRhythm';
+import { SAMPLE_ORG_DATA } from '../orgdata-sample';
 
 // 계열사 목록
 const COMPANY_LIST = [
@@ -100,6 +101,29 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
 
     const [leaderSearchTerm, setLeaderSearchTerm] = useState('');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+
+    // Member Management State
+    const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
+    const [editingMember, setEditingMember] = useState<Employee | null>(null);
+
+    const handleDeleteMember = (memberId: string) => {
+        setAllEmployees(prev => prev.filter(e => e.id !== memberId));
+    };
+
+    const handleSaveMember = (updatedMember: Employee) => {
+        setAllEmployees(prev => {
+            const exists = prev.find(e => e.id === updatedMember.id);
+            if (exists) {
+                return prev.map(e => e.id === updatedMember.id ? updatedMember : e);
+            } else {
+                // New member - generate ID if not present
+                const newMember = { ...updatedMember, id: updatedMember.id || `new_${Date.now()}` };
+                return [...prev, newMember];
+            }
+        });
+        setIsEditMemberModalOpen(false);
+        setEditingMember(null);
+    };
 
     // New States for Enhancements
     const [memberStatuses, setMemberStatuses] = useState<Record<string, string>>(() => {
@@ -366,13 +390,19 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                 });
 
                 const teams: Record<string, Employee[]> = {};
+                const deptDirectMembers: Employee[] = [];
+
                 deptEmployees.forEach(emp => {
                     if (emp.team) {
                         if (!teams[emp.team]) teams[emp.team] = [];
                         teams[emp.team].push(emp);
+                    } else {
+                        // Members without a team go directly under department
+                        deptDirectMembers.push(emp);
                     }
                 });
 
+                // Add teams with members
                 Object.keys(teams).sort((a, b) => {
                     const orderA = getSortOrder(`TEAM:${a}`);
                     const orderB = getSortOrder(`TEAM:${b}`);
@@ -413,7 +443,35 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                         }
                     });
 
+                    // Add team members as children
+                    teams[teamName].forEach(member => {
+                        // Skip if member is the team leader
+                        if (member.id === teamHeadId) return;
+
+                        teamNode.children!.push({
+                            id: `MEMBER:${member.id}`,
+                            name: member.name,
+                            type: 'MEMBER',
+                            employee: member,
+                            children: []
+                        });
+                    });
+
                     deptNode.children!.push(teamNode);
+                });
+
+                // Add department direct members (no team)
+                deptDirectMembers.forEach(member => {
+                    // Skip if member is the department leader
+                    if (member.id === deptHeadId) return;
+
+                    deptNode.children!.push({
+                        id: `MEMBER:${member.id}`,
+                        name: member.name,
+                        type: 'MEMBER',
+                        employee: member,
+                        children: []
+                    });
                 });
 
                 divNode.children!.push(deptNode);
@@ -881,6 +939,96 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
     };
 
     const renderTreeNode = (node: OrgNode, parentManagerId?: string) => {
+        // Handle MEMBER type nodes differently
+        if (node.type === 'MEMBER' && node.employee) {
+            const member = node.employee;
+            const manualStatus = memberStatuses[member.id];
+            const isConcurrent = manualStatus === 'CONCURRENT';
+            const isDispatch = manualStatus === 'DISPATCH';
+            const isSupport = manualStatus === 'SUPPORT';
+            const isExternal = member.primaryCompany !== activeCompany;
+
+            return (
+                <div className="flex flex-col items-start">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg border-2 shadow-sm p-3 w-[200px] hover:shadow-md transition-all ${isExternal
+                            ? 'border-orange-400 dark:border-orange-500 bg-orange-50/30 dark:bg-orange-900/10'
+                            : 'border-slate-200 dark:border-slate-700'
+                        }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden border-2 flex-shrink-0 relative ${isExternal ? 'border-orange-400 dark:border-orange-500' : 'border-slate-200 dark:border-slate-600'
+                                }`}>
+                                {member.avatarUrl ? <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" /> : <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{member.name[0]}</span>}
+                                {showBiorhythm && (member as any).birthDate && (
+                                    <div className="absolute -top-1 -right-1 z-10 scale-50 origin-center">
+                                        <BioRhythm birthDate={(member as any).birthDate} />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-slate-800 dark:text-white truncate">{member.name}</div>
+                                {member.englishName && (
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate italic">{member.englishName}</div>
+                                )}
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{member.position}</div>
+                            </div>
+                        </div>
+
+                        {/* External company indicator */}
+                        {isExternal && (
+                            <div className="mb-2 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded border border-orange-200 dark:border-orange-800">
+                                <div className="flex items-center gap-1">
+                                    <svg className="w-3 h-3 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                                    <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300">타사 소속: {member.primaryCompany}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Contact info */}
+                        <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-700">
+                            {member.extensionNumber && (
+                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                    <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                    <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">내선 {member.extensionNumber}</span>
+                                </div>
+                            )}
+                            {member.phone && (
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                    <span className="font-mono">{member.phone}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Status badges and admin control */}
+                        <div className="flex gap-1 mt-2 flex-wrap items-center">
+                            {isConcurrent && <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold border border-orange-200 dark:border-orange-800">겸직</span>}
+                            {isDispatch && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800">파견</span>}
+                            {isSupport && <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold border border-green-200 dark:border-green-800">지원</span>}
+
+                            {/* Admin status control */}
+                            {isAdmin && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const current = memberStatuses[member.id];
+                                        const next = current === 'CONCURRENT' ? 'DISPATCH' : current === 'DISPATCH' ? 'SUPPORT' : current === 'SUPPORT' ? null : 'CONCURRENT';
+                                        const newStatuses = { ...memberStatuses };
+                                        if (next) newStatuses[member.id] = next;
+                                        else delete newStatuses[member.id];
+                                        setMemberStatuses(newStatuses);
+                                    }}
+                                    className="text-[9px] px-1.5 py-0.5 rounded font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                                    title="상태 변경: 없음 → 겸직 → 파견 → 지원 → 없음"
+                                >
+                                    🏷️
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Original rendering for CEO, DIVISION, DEPARTMENT, TEAM
         const isExpanded = expandedNodes.has(node.id);
         const hasChildren = node.children && node.children.length > 0;
         const leader = node.managerId ? allEmployees.find(e => e.id === node.managerId) : null;
@@ -986,15 +1134,34 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                 {hasChildren && isExpanded && (
                     <>
                         <div className="w-px h-6 bg-slate-300 dark:bg-slate-600"></div>
-                        <div className="flex gap-6 relative pt-4">
-                            {node.children!.length > 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] h-px bg-slate-300 dark:bg-slate-600"></div>}
-                            {node.children!.map((child) => (
-                                <div key={child.id} className="relative flex flex-col items-center">
-                                    <div className="absolute -top-4 w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
-                                    {renderTreeNode(child as any, node.managerId)}
+                        {/* Check if all children are MEMBER type - if so, display vertically */}
+                        {node.children!.every(child => child.type === 'MEMBER') ? (
+                            <div className="relative pl-8">
+                                {/* Main vertical line */}
+                                <div className="absolute left-0 top-0 w-px bg-slate-300 dark:bg-slate-600" style={{ height: '100%' }}></div>
+
+                                <div className="flex flex-col gap-4">
+                                    {node.children!.map((child, index) => (
+                                        <div key={child.id} className="relative">
+                                            {/* Horizontal connector line - positioned at card center */}
+                                            <div className="absolute left-[-32px] top-[28px] w-8 h-px bg-slate-300 dark:bg-slate-600"></div>
+                                            {renderTreeNode(child as any, node.managerId)}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ) : (
+                            /* Original horizontal layout for non-member nodes */
+                            <div className="flex gap-6 relative pt-4">
+                                {node.children!.length > 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] h-px bg-slate-300 dark:bg-slate-600"></div>}
+                                {node.children!.map((child) => (
+                                    <div key={child.id} className="relative flex flex-col items-center">
+                                        <div className="absolute -top-4 w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
+                                        {renderTreeNode(child as any, node.managerId)}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -1061,21 +1228,65 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                                     <span className="text-lg font-bold text-slate-400">{emp.name[0]}</span>
                                 )}
                             </div>
-                            <div>
-                                <div className="flex items-center gap-1.5">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-1.5 mb-1">
                                     <h3 className="font-bold text-slate-800 dark:text-white text-lg leading-tight">{emp.name}</h3>
                                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{emp.position}</span>
                                 </div>
-                                {/* Removed redundant company/dept info here as requested */}
+                                {emp.englishName && (
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 italic mb-1">{emp.englishName}</div>
+                                )}
+                                {/* Organization Hierarchy Display */}
+                                <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                    {emp.division && emp.division !== '경영진' && (
+                                        <>
+                                            <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded font-medium">{emp.division}</span>
+                                            <span className="text-slate-300 dark:text-slate-600">›</span>
+                                        </>
+                                    )}
+                                    {emp.department && emp.department !== '경영진' && (
+                                        <>
+                                            <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded font-medium">{emp.department}</span>
+                                            {emp.team && <span className="text-slate-300 dark:text-slate-600">›</span>}
+                                        </>
+                                    )}
+                                    {emp.team && (
+                                        <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded font-medium">{emp.team}</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mb-3">
+                    <div className="mb-3 flex items-center gap-2 flex-wrap">
                         {(displayRole || emp.isHead) && (
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeColor}`}>
                                 {displayRole || '조직장'}
                             </span>
+                        )}
+
+                        {/* Status badges */}
+                        {memberStatuses[emp.id] === 'CONCURRENT' && <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800">겸직</span>}
+                        {memberStatuses[emp.id] === 'DISPATCH' && <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">파견</span>}
+                        {memberStatuses[emp.id] === 'SUPPORT' && <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">지원</span>}
+
+                        {/* Admin status control */}
+                        {isAdmin && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const current = memberStatuses[emp.id];
+                                    const next = current === 'CONCURRENT' ? 'DISPATCH' : current === 'DISPATCH' ? 'SUPPORT' : current === 'SUPPORT' ? null : 'CONCURRENT';
+                                    const newStatuses = { ...memberStatuses };
+                                    if (next) newStatuses[emp.id] = next;
+                                    else delete newStatuses[emp.id];
+                                    setMemberStatuses(newStatuses);
+                                }}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                                title="상태 변경: 없음 → 겸직 → 파견 → 지원 → 없음"
+                            >
+                                🏷️ 상태
+                            </button>
                         )}
                     </div>
 
@@ -1237,10 +1448,39 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                                         {isLeaderMgmtMode ? '관리 종료' : '조직장 관리'}
                                     </button>
 
-                                    <input type="file" accept=".xlsx, .xls, .csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-                                    <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-sm whitespace-nowrap">
-                                        {isUploading ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
-                                        ERP 데이터 업로드
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`샘플 조직도 데이터를 불러오시겠습니까?\n(${SAMPLE_ORG_DATA.length}명의 예시 데이터)\n\n기존 데이터는 덮어씌워집니다.`)) {
+                                                setAllEmployees(SAMPLE_ORG_DATA);
+                                                alert('샘플 데이터가 로드되었습니다!');
+                                            }
+                                        }}
+                                        className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-colors shadow-sm whitespace-nowrap"
+                                        title="샘플 조직도 데이터 로드"
+                                    >
+                                        📊 샘플 데이터
+                                    </button>
+
+                                    <button
+                                        onClick={() => setIsEditMemberModalOpen(true)}
+                                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm whitespace-nowrap"
+                                    >
+                                        ➕ 구성원 추가
+                                    </button>
+
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                        accept=".xlsx,.xls"
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isUploading}
+                                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                    >
+                                        {isUploading ? '업로드 중...' : '📂 엑셀 업로드'}
                                     </button>
                                 </div>
                             )}

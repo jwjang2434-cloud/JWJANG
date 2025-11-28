@@ -74,15 +74,18 @@ export interface Employee {
   isHead?: boolean; // 조직장 여부
   displayOrder?: number; // 정렬 순서
   birthDate?: string; // 주민번호 앞 6자리 (보안 저장)
+  englishName?: string; // 영어 이름
 }
 
 // Organization Chart Tree Node
 export interface OrgNode {
   id: string;
   name: string; // 부서명 or 직책
-  type: 'CEO' | 'DIVISION' | 'DEPARTMENT' | 'TEAM';
+  type: 'CEO' | 'DIVISION' | 'DEPARTMENT' | 'TEAM' | 'MEMBER';
   manager?: string; // 부서장/담당자 이름
   managerId?: string; // Added managerId
+  members?: Employee[]; // Added members list
+  employee?: Employee; // For MEMBER type nodes
   children?: OrgNode[];
 }
 
