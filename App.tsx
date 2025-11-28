@@ -560,7 +560,7 @@ const App: React.FC = () => {
           {currentView === 'BUS' && <CommuterBus user={user} />}
           {currentView === 'SUGGESTION' && <Suggestions user={user} />}
           {currentView === 'NEWSLETTER' && <NewsletterViewer user={user} />}
-          {currentView === 'BROCHURE' && <CompanyBrochure />}
+          {currentView === 'BROCHURE' && <CompanyBrochure user={user} />}
           {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
           {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
