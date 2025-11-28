@@ -10,6 +10,7 @@ export interface Newsletter {
     cover: string;
     pages: string[];
     isNew: boolean;
+    pdfPath?: string;
 }
 
 // Initialize IndexedDB
@@ -86,6 +87,25 @@ export const deleteNewsletter = async (id: number): Promise<void> => {
 
     return new Promise((resolve, reject) => {
         const request = store.delete(id);
+        request.onsuccess = () => {
+            db.close();
+            resolve();
+        };
+        request.onerror = () => {
+            db.close();
+            reject(request.error);
+        };
+    });
+};
+
+// Update a newsletter
+export const updateNewsletter = async (newsletter: Newsletter): Promise<void> => {
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    return new Promise((resolve, reject) => {
+        const request = store.put(newsletter);
         request.onsuccess = () => {
             db.close();
             resolve();
