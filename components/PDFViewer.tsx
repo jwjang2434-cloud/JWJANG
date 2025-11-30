@@ -10,9 +10,21 @@ interface PDFViewerProps {
    type?: 'PDF' | 'IMAGE';
    allowDownload?: boolean; // 다운로드 허용 여부
    customImage?: string; // 사용자 업로드 이미지
+   showWatermark?: boolean; // 워터마크 표시 여부
+   showToolbar?: boolean; // 툴바 표시 여부 (PDF only)
 }
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ title, fileUrl, onClose, user, type = 'PDF', allowDownload = true, customImage }) => {
+const PDFViewer: React.FC<PDFViewerProps> = ({
+   title,
+   fileUrl,
+   onClose,
+   user,
+   type = 'PDF',
+   allowDownload = true,
+   customImage,
+   showWatermark = true,
+   showToolbar = false
+}) => {
    const [watermarkText, setWatermarkText] = useState('');
 
    useEffect(() => {
@@ -23,6 +35,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ title, fileUrl, onClose, user, ty
 
    // 워터마크 패턴 생성 (격자 배치)
    const renderWatermarks = () => {
+      if (!showWatermark) return null;
+
       const marks = [];
       const rows = 5; // 세로 줄 수
       const cols = 3; // 가로 줄 수
@@ -71,7 +85,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ title, fileUrl, onClose, user, ty
                   </div>
                   <div>
                      <h3 className="font-bold text-slate-800 dark:text-white text-lg truncate max-w-md">{title}</h3>
-                     <p className="text-xs text-slate-500 dark:text-slate-400">보안 문서 열람 중 • IP: 192.168.0.1</p>
+                     <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {showWatermark ? `보안 문서 열람 중 • IP: 192.168.0.1` : '공개 문서'}
+                     </p>
                   </div>
                </div>
 
@@ -137,7 +153,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ title, fileUrl, onClose, user, ty
                {/* Document Mock Display */}
                <div className={`bg-white shadow-2xl ${fileUrl && type === 'PDF' ? 'w-full h-full p-0' : 'min-h-[800px] w-[600px] md:w-[700px] lg:w-[800px] p-12'} relative z-0 text-slate-800 overflow-y-auto max-h-full`}>
                   {fileUrl && type === 'PDF' ? (
-                     <iframe src={`${fileUrl}#toolbar=0`} className="w-full h-full" title={title} />
+                     <iframe src={`${fileUrl}${showToolbar ? '' : '#toolbar=0'}`} className="w-full h-full" title={title} />
                   ) : customImage ? (
                      <div className="flex flex-col items-center">
                         <h1 className="text-3xl font-extrabold uppercase tracking-wide text-slate-900 mb-8">{title}</h1>

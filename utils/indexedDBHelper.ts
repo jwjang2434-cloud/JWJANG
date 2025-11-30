@@ -1,6 +1,6 @@
 // IndexedDB helper for storing newsletters with large PDF images
 const DB_NAME = 'NewsletterDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for brochures
 const STORE_NAME = 'newsletters';
 
 export interface Newsletter {
@@ -26,9 +26,13 @@ const initDB = (): Promise<IDBDatabase> => {
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME, { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains(BROCHURE_STORE_NAME)) {
+                db.createObjectStore(BROCHURE_STORE_NAME, { keyPath: 'id' });
+            }
         };
     });
 };
+
 
 // Save all newsletters
 export const saveNewsletters = async (newsletters: Newsletter[]): Promise<void> => {
@@ -132,4 +136,108 @@ export const migrateFromLocalStorage = async (): Promise<Newsletter[]> => {
         console.error('Migration error:', error);
     }
     return [];
+};
+
+// --- Brochure Helper ---
+
+export interface Brochure {
+    id: number;
+    title: string;
+    description: string;
+    date: string;
+    cover: string; // Base64 image
+    pdfPath?: string; // For local files
+    fileData?: string; // Base64 PDF data (optional, for uploaded files)
+    isNew: boolean;
+}
+
+const BROCHURE_STORE_NAME = 'brochures';
+
+
+
+// Save all brochures
+export const saveBrochures = async (brochures: Brochure[]): Promise<void> => {
+    const db = await initDB();
+    const transaction = db.transaction(BROCHURE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(BROCHURE_STORE_NAME);
+
+    // Clear existing data
+    await new Promise<void>((resolve, reject) => {
+        const clearRequest = store.clear();
+        clearRequest.onsuccess = () => resolve();
+        clearRequest.onerror = () => reject(clearRequest.error);
+    });
+
+    // Add all brochures
+    for (const brochure of brochures) {
+        await new Promise<void>((resolve, reject) => {
+            const addRequest = store.add(brochure);
+            addRequest.onsuccess = () => resolve();
+            addRequest.onerror = () => reject(addRequest.error);
+        });
+    }
+
+    db.close();
+};
+
+// Load all brochures
+export const loadBrochures = async (): Promise<Brochure[]> => {
+    try {
+        const db = await initDB();
+        const transaction = db.transaction(BROCHURE_STORE_NAME, 'readonly');
+        const store = transaction.objectStore(BROCHURE_STORE_NAME);
+
+        return new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => {
+                db.close();
+                resolve(request.result || []);
+            };
+            request.onerror = () => {
+                db.close();
+                reject(request.error);
+            };
+        });
+    } catch (error) {
+        console.error('IndexedDB load error:', error);
+        return [];
+    }
+};
+
+// Delete a brochure
+export const deleteBrochure = async (id: number): Promise<void> => {
+    const db = await initDB();
+    const transaction = db.transaction(BROCHURE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(BROCHURE_STORE_NAME);
+
+    return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => {
+            db.close();
+            resolve();
+        };
+        request.onerror = () => {
+            db.close();
+            reject(request.error);
+        };
+    });
+};
+
+// Update a brochure
+export const updateBrochure = async (brochure: Brochure): Promise<void> => {
+    const db = await initDB();
+    const transaction = db.transaction(BROCHURE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(BROCHURE_STORE_NAME);
+
+    return new Promise((resolve, reject) => {
+        const request = store.put(brochure);
+        request.onsuccess = () => {
+            db.close();
+            resolve();
+        };
+        request.onerror = () => {
+            db.close();
+            reject(request.error);
+        };
+    });
 };
