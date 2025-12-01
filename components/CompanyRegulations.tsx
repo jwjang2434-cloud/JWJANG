@@ -1,33 +1,73 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, UserRole, ReferenceDoc } from '../types';
-import { REFERENCE_DOCS } from '../constants';
+import { UserProfile, UserRole } from '../types';
 import PDFViewer from './PDFViewer';
+import { saveRegulations, loadRegulations, deleteRegulation, Regulation } from '../utils/indexedDBHelper';
 
 interface CompanyRegulationsProps {
   user: UserProfile;
 }
 
 const CompanyRegulations: React.FC<CompanyRegulationsProps> = ({ user }) => {
-  // [수정] LocalStorage 연동
-  const [docs, setDocs] = useState<ReferenceDoc[]>(() => {
-    const saved = localStorage.getItem('regulationDocs');
-    return saved ? JSON.parse(saved) : REFERENCE_DOCS;
-  });
-
-  const [activeDoc, setActiveDoc] = useState<ReferenceDoc | null>(null);
+  const [docs, setDocs] = useState<Regulation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeDoc, setActiveDoc] = useState<Regulation | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = user.role === UserRole.ADMIN;
 
-  useEffect(() => {
-    localStorage.setItem('regulationDocs', JSON.stringify(docs));
-  }, [docs]);
+  // Initial Data
+  const initialRegulations: Regulation[] = [
+    {
+      id: 'reg-1',
+      title: '2025 취업규칙',
+      type: 'PDF',
+      lastUpdated: '2025-01-01',
+      content: '한일후지코리아 2025년도 취업규칙입니다.',
+      keywords: ['복무', '임금', '근로조건', '취업규칙'],
+      pdfPath: '/regulations/취업규칙(한일후지코리아) 2025.pdf',
+      isNew: true
+    },
+    {
+      id: 'reg-2',
+      title: '포상 규정',
+      type: 'PDF',
+      lastUpdated: '2024-01-01',
+      content: '사내 포상에 관한 제반 규정입니다.',
+      keywords: ['포상', '상벌', '규정'],
+      pdfPath: '/regulations/포상 규정.pdf',
+      isNew: false
+    }
+  ];
 
-  const handleViewDocument = (doc: ReferenceDoc) => {
-    setActiveDoc(doc);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    let loaded = await loadRegulations();
+
+    // Initialize if empty
+    if (loaded.length === 0) {
+      console.log('Initializing regulations from local files...');
+      loaded = initialRegulations;
+      await saveRegulations(loaded);
+    }
+
+    setDocs(loaded);
+    setIsLoading(false);
+  };
+
+  const handleViewDocument = (doc: Regulation) => {
+    // For local files, use pdfPath. For uploaded files, use fileUrl (Base64/Blob)
+    const fileSource = doc.pdfPath || doc.fileUrl;
+
+    if (fileSource) {
+      setActiveDoc({ ...doc, fileUrl: fileSource });
+    }
   };
 
   const confirmDelete = (id: string) => {
@@ -35,13 +75,17 @@ const CompanyRegulations: React.FC<CompanyRegulationsProps> = ({ user }) => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (itemToDelete) {
-      const updatedDocs = docs.filter(doc => doc.id !== itemToDelete);
-      setDocs(updatedDocs);
-      localStorage.setItem('regulationDocs', JSON.stringify(updatedDocs));
-      setIsDeleteModalOpen(false);
-      setItemToDelete(null);
+      try {
+        await deleteRegulation(itemToDelete);
+        setDocs(prev => prev.filter(doc => doc.id !== itemToDelete));
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+      } catch (error) {
+        console.error("Delete failed:", error);
+        alert("삭제 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -50,20 +94,31 @@ const CompanyRegulations: React.FC<CompanyRegulationsProps> = ({ user }) => {
     if (!file) return;
 
     setIsUploading(true);
-    setTimeout(() => {
-      const newDoc: ReferenceDoc = {
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const fileBase64 = reader.result as string;
+
+      const newDoc: Regulation = {
         id: `doc-${Date.now()}`,
         title: file.name,
         type: 'PDF',
         lastUpdated: new Date().toISOString().split('T')[0],
         content: '새로 업로드된 규정입니다.',
         keywords: ['신규'],
-        fileUrl: URL.createObjectURL(file)
+        fileUrl: fileBase64,
+        isNew: true
       };
-      setDocs([newDoc, ...docs]);
+
+      const updatedDocs = [newDoc, ...docs];
+      setDocs(updatedDocs);
+      await saveRegulations(updatedDocs);
+
       setIsUploading(false);
       alert("규정 문서가 업로드되었습니다.");
-    }, 1500);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
   };
 
   return (
@@ -75,7 +130,9 @@ const CompanyRegulations: React.FC<CompanyRegulationsProps> = ({ user }) => {
           onClose={() => setActiveDoc(null)}
           user={user}
           type={activeDoc.type === 'PDF' ? 'PDF' : 'IMAGE'}
-          allowDownload={false}
+          allowDownload={true}
+          showWatermark={true} // Regulations might still need watermark
+          showToolbar={true}
         />
       )}
 
@@ -154,44 +211,59 @@ const CompanyRegulations: React.FC<CompanyRegulationsProps> = ({ user }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {docs.map((doc, index) => (
-                  <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                    <td className="px-6 py-4 text-slate-400 text-center">{index + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors cursor-pointer" onClick={() => handleViewDocument(doc)}>
-                          {doc.title}
-                        </span>
-                        {index < 2 && <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold rounded border border-red-200 dark:border-red-800">NEW</span>}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        데이터를 불러오는 중...
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold border ${doc.type === 'PDF'
+                  </tr>
+                ) : docs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">등록된 규정이 없습니다.</td>
+                  </tr>
+                ) : (
+                  docs.map((doc, index) => (
+                    <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                      <td className="px-6 py-4 text-slate-400 text-center">{index + 1}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors cursor-pointer" onClick={() => handleViewDocument(doc)}>
+                            {doc.title}
+                          </span>
+                          {doc.isNew && <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold rounded border border-red-200 dark:border-red-800">NEW</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded text-xs font-bold border ${doc.type === 'PDF'
                           ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/30'
                           : 'bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/30'
-                        }`}>
-                        {doc.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono text-xs whitespace-nowrap">
-                      {doc.lastUpdated}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDelete(doc.id);
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                          title="삭제"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          }`}>
+                          {doc.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono text-xs whitespace-nowrap">
+                        {doc.lastUpdated}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete(doc.id);
+                            }}
+                            className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                            title="삭제"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

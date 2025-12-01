@@ -27,6 +27,37 @@ const CompanyBrochure: React.FC<CompanyBrochureProps> = ({ user }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Initial Data
+    const initialBrochures: Brochure[] = [
+        {
+            id: 1,
+            title: '한일후지코리아 회사소개서 (국문)',
+            description: '한일후지코리아의 회사소개서입니다.\n회사의 비전, 연혁, 주요 사업 영역 등을 확인하실 수 있습니다.',
+            date: '2024-01-15',
+            cover: '', // Will be generated
+            pdfPath: '/brochures/HANIL-FUJI_Company Intro. (국문).pdf',
+            isNew: false
+        },
+        {
+            id: 2,
+            title: 'HFK 제품 브로슈어',
+            description: '주요 제품 라인업과 상세 사양을 담은 브로슈어입니다.',
+            date: '2023-11-20',
+            cover: '', // Will be generated
+            pdfPath: '/brochures/HFK BROCHURE.pdf',
+            isNew: false
+        },
+        {
+            id: 3,
+            title: 'K Group 프로필',
+            description: 'K Group의 전체적인 소개 자료입니다.',
+            date: '2023-10-01',
+            cover: '', // Will be generated
+            pdfPath: '/brochures/K GROUP PROFILE_v3.3.2.pdf',
+            isNew: false
+        }
+    ];
+
     // Load Brochures
     useEffect(() => {
         loadData();
@@ -34,7 +65,32 @@ const CompanyBrochure: React.FC<CompanyBrochureProps> = ({ user }) => {
 
     const loadData = async () => {
         setIsLoading(true);
-        const loaded = await loadBrochures();
+        let loaded = await loadBrochures();
+
+        // Initialize if empty
+        if (loaded.length === 0) {
+            console.log('Initializing brochures from local files...');
+            const processedBrochures = [];
+
+            for (const item of initialBrochures) {
+                if (item.pdfPath) {
+                    try {
+                        // Generate cover from local PDF
+                        const cover = await generateCoverImage(item.pdfPath);
+                        processedBrochures.push({ ...item, cover });
+                    } catch (e) {
+                        console.error(`Failed to process ${item.title}:`, e);
+                        processedBrochures.push(item);
+                    }
+                } else {
+                    processedBrochures.push(item);
+                }
+            }
+
+            loaded = processedBrochures;
+            await saveBrochures(loaded);
+        }
+
         // Sort by date descending
         loaded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setBrochures(loaded);
