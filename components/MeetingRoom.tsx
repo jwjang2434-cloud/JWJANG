@@ -61,6 +61,13 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
 
   // State
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewingImageRoom, setViewingImageRoom] = useState<string | null>(null);
+
+  const roomImages: Record<string, string> = {
+    '대회의실': '/meeting-rooms/large.jpg',
+    '중회의실': '/meeting-rooms/medium.jpg',
+    '소회의실': '/meeting-rooms/small.jpg',
+  };
 
   // [수정] LocalStorage에서 데이터 로드 (v2로 변경하여 초기화)
   const [rooms, setRooms] = useState<Room[]>(() => {
@@ -308,6 +315,31 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
   return (
     <div className="p-6 lg:p-10 bg-slate-50 dark:bg-slate-950 min-h-full transition-colors duration-300 relative">
 
+      {/* Image View Modal */}
+      {viewingImageRoom && roomImages[viewingImageRoom] && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setViewingImageRoom(null)}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+          <div className="relative z-10 max-w-4xl w-full max-h-[90vh] flex flex-col items-center animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-2xl overflow-hidden">
+              <img
+                src={roomImages[viewingImageRoom]}
+                alt={viewingImageRoom}
+                className="w-full h-auto max-h-[80vh] object-contain rounded-xl"
+              />
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <h3 className="text-white text-xl font-bold">{viewingImageRoom} 전경</h3>
+              <button
+                onClick={() => setViewingImageRoom(null)}
+                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors backdrop-blur-md"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Reservation Modal */}
       {modalState && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -490,31 +522,32 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
             onClick={handleToday}
             className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
-            오늘 (Today)
+            오늘
           </button>
         </div>
 
-        {/* Booking Table */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700">
+        {/* Reservation Table */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+          <div className="overflow-x-auto relative">
+            <table className="w-full table-fixed border-collapse">
+              <thead>
                 <tr>
-                  <th className="px-6 py-4 sticky left-0 bg-slate-50 dark:bg-slate-800 z-20 min-w-[200px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">회의실 정보</th>
-                  {times.map(time => {
-                    const isPast = isPastTime(currentDateKey, time);
-                    return (
-                      <th key={time} className={`px-4 py-4 text-center min-w-[80px] whitespace-nowrap ${isPast ? 'text-slate-300 dark:text-slate-600' : ''}`}>
-                        {time}
-                      </th>
-                    );
-                  })}
+                  <th className="w-[180px] px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sticky left-0 bg-white dark:bg-slate-900 z-30 border-b border-slate-200 dark:border-slate-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                    회의실
+                  </th>
+                  {times.map((time) => (
+                    <th key={time} className="w-[100px] px-1 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      {time}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {rooms.map((room) => (
+              <tbody>
+                {rooms.map((room, index) => (
                   <tr key={room.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-200 sticky left-0 bg-white dark:bg-slate-900 z-20 border-r border-slate-100 dark:border-slate-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                    <td
+                      className="px-6 py-4 font-medium text-slate-700 dark:text-slate-200 sticky left-0 bg-white dark:bg-slate-900 z-20 border-r border-slate-100 dark:border-slate-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] relative group"
+                    >
                       {isEditing ? (
                         <div className="flex flex-col gap-2 min-w-[180px]">
                           <input
@@ -539,7 +572,24 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
                         </div>
                       ) : (
                         <>
-                          <div className="font-bold">{room.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold cursor-help decoration-dashed underline-offset-4 decoration-slate-300">{room.name}</div>
+                            {roomImages[room.name] && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingImageRoom(room.name);
+                                }}
+                                className="text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 transition-colors p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                                title="회의실 전경 보기"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mt-1">최대 {room.capacity}명 수용</p>
                         </>
                       )}
@@ -618,7 +668,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ user }) => {
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 
