@@ -568,6 +568,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                 team: findColumnIndex(headerRow, ['팀명', '팀']),
                 position: findColumnIndex(headerRow, ['직위']),
                 name: findColumnIndex(headerRow, ['성명', '이름']),
+                englishName: findColumnIndex(headerRow, ['영문성명', '영문이름', 'englishname']),
                 rrid: findColumnIndex(headerRow, ['주민번호', '주민등록번호']),
                 phone: findColumnIndex(headerRow, ['핸드폰', '휴대폰']),
                 duty: findColumnIndex(headerRow, ['직책']),
@@ -598,6 +599,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                 const dept = idxMap.dept > -1 ? String(row[idxMap.dept] || '').trim() : '';
                 const team = idxMap.team > -1 ? String(row[idxMap.team] || '').trim() : '';
                 const position = idxMap.position > -1 ? String(row[idxMap.position] || '').trim() : '';
+                const englishName = idxMap.englishName > -1 ? String(row[idxMap.englishName] || '').trim() : '';
                 const rrid = idxMap.rrid > -1 ? String(row[idxMap.rrid] || '').trim() : '';
                 const phone = idxMap.phone > -1 ? String(row[idxMap.phone] || '').trim() : '';
                 const duty = idxMap.duty > -1 ? String(row[idxMap.duty] || '').trim() : '';
@@ -638,6 +640,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                     team,
                     position,
                     name,
+                    englishName,
                     duty,
                     email,
                     phone,
@@ -951,18 +954,13 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
             return (
                 <div className="flex flex-col items-start">
                     <div className={`bg-white dark:bg-slate-800 rounded-lg border-2 shadow-sm p-3 w-[200px] hover:shadow-md transition-all ${isExternal
-                            ? 'border-orange-400 dark:border-orange-500 bg-orange-50/30 dark:bg-orange-900/10'
-                            : 'border-slate-200 dark:border-slate-700'
+                        ? 'border-orange-400 dark:border-orange-500 bg-orange-50/30 dark:bg-orange-900/10'
+                        : 'border-slate-200 dark:border-slate-700'
                         }`}>
                         <div className="flex items-center gap-2 mb-2">
                             <div className={`w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden border-2 flex-shrink-0 relative ${isExternal ? 'border-orange-400 dark:border-orange-500' : 'border-slate-200 dark:border-slate-600'
                                 }`}>
                                 {member.avatarUrl ? <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" /> : <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{member.name[0]}</span>}
-                                {showBiorhythm && (member as any).birthDate && (
-                                    <div className="absolute -top-1 -right-1 z-10 scale-50 origin-center">
-                                        <BioRhythm birthDate={(member as any).birthDate} />
-                                    </div>
-                                )}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-slate-800 dark:text-white truncate">{member.name}</div>
@@ -1072,18 +1070,15 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                             <div className={`flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-2 w-full text-left relative min-h-[72px] ${isExternal ? 'border-2 border-orange-400 dark:border-orange-500 bg-orange-50 dark:bg-orange-900/20' : ''}`}>
                                 <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-600 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-500 flex-shrink-0 relative">
                                     {leader.avatarUrl ? <img src={leader.avatarUrl} alt={leader.name} className="w-full h-full object-cover" /> : <span className="text-xs">{leader.name[0]}</span>}
-                                    {/* Biorhythm for Tree Node */}
-                                    {showBiorhythm && (leader as any).birthDate && (
-                                        <div className="absolute -top-1 -right-1 z-10 scale-50 origin-center">
-                                            <BioRhythm birthDate={(leader as any).birthDate} />
-                                        </div>
-                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1">
                                         <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{leader.name}</span>
                                         <span className="text-[10px] text-slate-500 dark:text-slate-400">{leader.position}</span>
                                     </div>
+                                    {leader.englishName && (
+                                        <div className="text-[10px] text-slate-400 dark:text-slate-500 italic truncate">{leader.englishName}</div>
+                                    )}
                                     <div className="flex flex-col gap-0.5 mt-0.5">
                                         {leader.extensionNumber && <span className="text-[10px] text-slate-500 dark:text-slate-400">내선: {leader.extensionNumber}</span>}
                                         {leader.phone && <span className="text-[10px] text-slate-400 dark:text-slate-500">{leader.phone}</span>}
@@ -1208,8 +1203,8 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
         // I'll assume I'll fix processExcelData to include `birthDate`.
 
         return (
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group h-full flex flex-col relative">
-                <div className={`h-1.5 w-full bg-gradient-to-r ${leaderRole ? 'from-indigo-500 to-purple-500' : 'from-slate-300 to-slate-400'}`}></div>
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all duration-300 overflow-visible group h-full flex flex-col relative">
+                <div className={`h-1.5 w-full bg-gradient-to-r rounded-t-lg ${leaderRole ? 'from-indigo-500 to-purple-500' : 'from-slate-300 to-slate-400'}`}></div>
 
                 {/* Biorhythm Badge */}
                 {showBiorhythm && (emp as any).birthDate && (
@@ -1296,12 +1291,6 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                             <span className="font-mono">{emp.phone}</span>
                             {emp.extensionNumber && <span className="text-slate-400">|</span>}
                             {emp.extensionNumber && <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold text-sm">내선 {emp.extensionNumber}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 overflow-hidden">
-                            <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                            <a href={`mailto:${emp.email}`} className="font-mono truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                {emp.email}
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -1557,7 +1546,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                                             <th className="px-6 py-4">이름 / 직위</th>
                                             <th className="px-6 py-4">소속</th>
                                             <th className="px-6 py-4">연락처</th>
-                                            <th className="px-6 py-4">이메일</th>
+                                            <th className="px-6 py-4">영문성명</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1583,7 +1572,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                                                         {emp.extensionNumber && <span className="block text-xs text-slate-400">내선: {emp.extensionNumber}</span>}
                                                         {emp.phone}
                                                     </td>
-                                                    <td className="px-6 py-3 text-slate-600 dark:text-slate-300">{emp.email}</td>
+                                                    <td className="px-6 py-3 text-slate-600 dark:text-slate-300">{emp.englishName || '-'}</td>
                                                 </tr>
                                             ))
                                         ) : (
