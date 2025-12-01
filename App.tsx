@@ -37,6 +37,10 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfileCustomization, setShowProfileCustomization] = useState(false);
 
+  // Chatbot Resizing State
+  const [chatWidth, setChatWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
   // Selected Notice for Popup (Allows viewing any notice, not just latest)
   const [activeNotice, setActiveNotice] = useState<Notice | null>(null);
   const [popupQueue, setPopupQueue] = useState<Notice[]>([]); // Queue for Must Read notices
@@ -306,6 +310,39 @@ const App: React.FC = () => {
     }, 300);
   };
 
+  // Chatbot Resizing Effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      // Calculate new width: Window Width - Mouse X - Right Margin (24px)
+      const newWidth = window.innerWidth - e.clientX - 24;
+
+      // Constraints: Min 300px, Max 800px
+      if (newWidth >= 300 && newWidth <= 800) {
+        setChatWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none'; // Prevent selection while dragging
+    } else {
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -515,7 +552,19 @@ const App: React.FC = () => {
         <div className={`flex-1 relative bg-slate-50 dark:bg-slate-950 transition-colors duration-300 overflow-y-auto`}>
 
           {/* Floating Chat Widget */}
-          <div className={`fixed bottom-20 right-6 z-50 w-[400px] h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+          <div
+            className={`fixed bottom-20 right-6 z-50 h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
+            style={{ width: `${chatWidth}px` }}
+          >
+            {/* Resize Handle */}
+            <div
+              className="absolute left-0 top-0 bottom-0 w-3 -ml-1.5 cursor-ew-resize hover:bg-indigo-500/10 transition-colors z-50 flex items-center justify-center group"
+              onMouseDown={() => setIsResizing(true)}
+              title="드래그하여 크기 조절"
+            >
+              <div className="w-1 h-12 bg-slate-300 dark:bg-slate-600 rounded-full group-hover:bg-indigo-500 transition-colors opacity-0 group-hover:opacity-100"></div>
+            </div>
+
             <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

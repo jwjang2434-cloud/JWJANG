@@ -12,9 +12,16 @@ interface FlipbookViewerProps {
     height?: number;
 }
 
-export const generateCoverImage = async (file: File): Promise<string> => {
+export const generateCoverImage = async (file: File | string): Promise<string> => {
     try {
-        const arrayBuffer = await file.arrayBuffer();
+        let arrayBuffer: ArrayBuffer;
+        if (typeof file === 'string') {
+            const response = await fetch(file);
+            arrayBuffer = await response.arrayBuffer();
+        } else {
+            arrayBuffer = await file.arrayBuffer();
+        }
+
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);

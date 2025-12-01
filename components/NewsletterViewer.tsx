@@ -135,32 +135,66 @@ const NewsletterViewer: React.FC<NewsletterViewerProps> = ({ user }) => {
   };
 
   // Load Data
+  // Load Data
   useEffect(() => {
     const loadData = async () => {
-      // Try to migrate first
-      await migrateFromLocalStorage();
+      try {
+        // Try to migrate first
+        await migrateFromLocalStorage();
 
-      // Load from DB
-      let loaded = await loadNewsletters();
+        // Load from DB
+        let loaded = await loadNewsletters();
 
-      if (loaded.length === 0) {
-        // If empty, use initial data
-        loaded = initialNewsletters;
-        await saveNewsletters(initialNewsletters);
-      }
+        // Remove unwanted default newsletters (Cleanup)
+        const deprecatedTitles = ['신년사', '송년의 밤', '가을 야유회', '창립기념일'];
+        const filtered = loaded.filter(n => !deprecatedTitles.some(t => n.title.includes(t)));
 
-      // Sort by date descending (newest first)
-      loaded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setNewsletters(loaded);
+        if (filtered.length !== loaded.length) {
+          console.log("Removed deprecated newsletters");
+          loaded = filtered;
+          setNewsletters(loaded);
+          try {
+            await saveNewsletters(loaded);
+          } catch (e) {
+            console.error("Failed to save cleaned newsletters:", e);
+          }
+        }
 
-      // Check if any need processing (background)
-      if (loaded.some(n => n.pdfPath && n.pages.length === 0)) {
-        setIsProcessing(true);
-        const processed = await processPdfPaths(loaded);
-        // Sort again just in case
-        processed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setNewsletters(processed);
-        setIsProcessing(false);
+        // Sync initial data: Ensure hardcoded newsletters exist
+        const missingInitial = initialNewsletters.filter(init => !loaded.some(l => l.id === init.id));
+        if (missingInitial.length > 0) {
+          console.log("Found missing initial newsletters, adding them...", missingInitial);
+          loaded = [...loaded, ...missingInitial];
+          setNewsletters(loaded); // Update UI
+          try {
+            await saveNewsletters(loaded);
+          } catch (e) {
+            console.error("Failed to save synced newsletters:", e);
+          }
+        } else {
+          setNewsletters(loaded);
+        }
+
+        // Sort by date descending (newest first)
+        loaded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setNewsletters([...loaded]); // Force update
+
+        // Check if any need processing (background)
+        if (loaded.some(n => n.pdfPath && n.pages.length === 0)) {
+          setIsProcessing(true);
+          try {
+            const processed = await processPdfPaths(loaded);
+            // Sort again just in case
+            processed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setNewsletters(processed);
+          } catch (e) {
+            console.error("Failed to process PDF paths:", e);
+          } finally {
+            setIsProcessing(false);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
       }
     };
     loadData();

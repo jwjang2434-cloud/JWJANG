@@ -59,6 +59,7 @@ const CompanyBrochure: React.FC<CompanyBrochureProps> = ({ user }) => {
     ];
 
     // Load Brochures
+    // Load Brochures
     useEffect(() => {
         loadData();
     }, []);
@@ -67,15 +68,21 @@ const CompanyBrochure: React.FC<CompanyBrochureProps> = ({ user }) => {
         setIsLoading(true);
         let loaded = await loadBrochures();
 
-        // Initialize if empty
-        if (loaded.length === 0) {
-            console.log('Initializing brochures from local files...');
+        // 1. Sync initial data: Ensure hardcoded brochures exist
+        const missingInitial = initialBrochures.filter(init => !loaded.some(l => l.id === init.id));
+
+        // 2. Check for missing covers in existing data
+        const missingCovers = loaded.filter(l => !l.cover && l.pdfPath);
+
+        let hasUpdates = false;
+
+        if (missingInitial.length > 0) {
+            console.log('Found missing initial brochures, adding them...', missingInitial);
             const processedBrochures = [];
 
-            for (const item of initialBrochures) {
+            for (const item of missingInitial) {
                 if (item.pdfPath) {
                     try {
-                        // Generate cover from local PDF
                         const cover = await generateCoverImage(item.pdfPath);
                         processedBrochures.push({ ...item, cover });
                     } catch (e) {
@@ -86,14 +93,43 @@ const CompanyBrochure: React.FC<CompanyBrochureProps> = ({ user }) => {
                     processedBrochures.push(item);
                 }
             }
+            loaded = [...loaded, ...processedBrochures];
+            hasUpdates = true;
+        }
 
-            loaded = processedBrochures;
-            await saveBrochures(loaded);
+        if (missingCovers.length > 0) {
+            console.log('Found brochures with missing covers, regenerating...', missingCovers);
+            const updatedLoaded = await Promise.all(loaded.map(async (item) => {
+                if (!item.cover && item.pdfPath) {
+                    try {
+                        const cover = await generateCoverImage(item.pdfPath);
+                        if (cover) {
+                            hasUpdates = true;
+                            return { ...item, cover };
+                        }
+                    } catch (e) {
+                        console.error(`Failed to regenerate cover for ${item.title}:`, e);
+                    }
+                }
+                return item;
+            }));
+            loaded = updatedLoaded;
+            hasUpdates = true;
+        }
+
+        if (hasUpdates) {
+            setBrochures(loaded);
+            try {
+                await saveBrochures(loaded);
+            } catch (e) {
+                console.error("Failed to save updated brochures:", e);
+            }
+        } else {
+            setBrochures(loaded);
         }
 
         // Sort by date descending
         loaded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setBrochures(loaded);
         setIsLoading(false);
     };
 
