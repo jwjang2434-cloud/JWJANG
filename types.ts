@@ -89,7 +89,7 @@ export interface OrgNode {
   children?: OrgNode[];
 }
 // Navigation State
-export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE' | 'ADMIN_USER_LIST';
+export type ViewPage = 'CHAT' | 'MEETING' | 'FORMS' | 'MENU' | 'CAFE' | 'BUS' | 'SNACK' | 'SUGGESTION' | 'NEWSLETTER' | 'BROCHURE' | 'ORG_CHART' | 'REGULATIONS' | 'ADMIN_QUERIES' | 'NOTICE_BOARD' | 'MENU_MANAGEMENT' | 'ATTENDANCE' | 'ADMIN_ATTENDANCE' | 'ADMIN_USER_LIST' | 'CALENDAR';
 
 export interface MenuItem {
   id: ViewPage;
@@ -113,6 +113,28 @@ export interface UserAccount {
   companyName: string;
   avatarUrl?: string;
   birthDate?: string;
+  team?: string; // Added team field
+}
+
+// Calendar Types
+export interface ScheduleEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  startDate: string; // ISO string
+  endDate: string; // ISO string
+  type: 'PERSONAL' | 'TEAM';
+  teamId?: string; // For TEAM type events
+  createdAt: string;
+}
+
+export interface CalendarPermission {
+  id: string;
+  granteeId: string;
+  targetTeam: string;
+  grantedBy: string;
+  createdAt: string;
 }
 
 // Attendance Record

@@ -11,7 +11,9 @@ const INITIAL_USERS: UserAccount[] = [
     role: UserRole.ADMIN,
     companyName: '한일후지코리아(주)',
     avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
-    birthDate: '900101'
+    avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
+    birthDate: '900101',
+    team: '인사총무팀' // Default team for admin
   },
   {
     id: 'test1',
@@ -66,7 +68,8 @@ export const getUsers = async (): Promise<UserAccount[]> => {
     role: u.role as UserRole,
     companyName: u.company_name, // DB column: company_name
     avatarUrl: u.avatar_url,     // DB column: avatar_url
-    birthDate: u.birth_date      // DB column: birth_date
+    birthDate: u.birth_date,      // DB column: birth_date
+    team: u.team                 // DB column: team
   }));
 };
 
@@ -82,7 +85,9 @@ export const addUser = async (user: UserAccount): Promise<void> => {
       role: user.role,
       company_name: user.companyName,
       avatar_url: user.avatarUrl,
-      birth_date: user.birthDate
+      avatar_url: user.avatarUrl,
+      birth_date: user.birthDate,
+      team: user.team
     }]);
 
   if (error) {
@@ -99,7 +104,9 @@ export const updateUser = async (id: string, updates: Partial<UserAccount>): Pro
   if (updates.role) dbUpdates.role = updates.role;
   if (updates.companyName) dbUpdates.company_name = updates.companyName;
   if (updates.avatarUrl) dbUpdates.avatar_url = updates.avatarUrl;
+  if (updates.avatarUrl) dbUpdates.avatar_url = updates.avatarUrl;
   if (updates.birthDate) dbUpdates.birth_date = updates.birthDate;
+  if (updates.team) dbUpdates.team = updates.team;
 
   const { error } = await supabase
     .from('portal_users')
@@ -146,6 +153,7 @@ export const login = async (id: string, password: string): Promise<UserProfile> 
     companyName: data.company_name,
     avatarUrl: data.avatar_url || `https://ui-avatars.com/api/?name=${data.name}&background=random`,
     birthDate: data.birth_date,
+    team: data.team,
   };
 };
 
