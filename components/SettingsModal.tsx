@@ -10,8 +10,6 @@ interface SettingsModalProps {
   toggleTheme: () => void;
   llmConfig: LLMConfig;
   onSaveLlmConfig: (newConfig: LLMConfig) => void;
-  showBiorhythm: boolean;
-  onToggleBiorhythm: (show: boolean) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -22,8 +20,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   toggleTheme,
   llmConfig,
   onSaveLlmConfig,
-  showBiorhythm,
-  onToggleBiorhythm
 }) => {
   const [notifications, setNotifications] = useState(true);
   const [autoLogin, setAutoLogin] = useState(false);
@@ -118,19 +114,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
 
-            {/* Biorhythm Visibility */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-slate-700 dark:text-slate-200">바이오리듬 표시</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">조직도 및 카드에 바이오리듬을 표시합니다.</p>
-              </div>
-              <button
-                onClick={() => onToggleBiorhythm(!showBiorhythm)}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${showBiorhythm ? 'bg-indigo-600' : 'bg-slate-300'}`}
-              >
-                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ${showBiorhythm ? 'translate-x-6' : ''}`} />
-              </button>
-            </div>
+
 
             {/* Admin Only: AI Settings */}
             {isAdmin && (

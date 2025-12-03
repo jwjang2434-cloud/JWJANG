@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Employee, UserProfile, UserRole, OrgNode } from '../types';
 import * as XLSX from 'xlsx';
-import BioRhythm from './BioRhythm';
+
 import { SAMPLE_ORG_DATA } from '../orgdata-sample';
 
 // 계열사 목록
@@ -60,14 +60,13 @@ const DUTY_PRIORITY: Record<string, number> = {
 
 interface OrganizationChartProps {
     user: UserProfile;
-    showBiorhythm: boolean;
 }
 
 interface LeaderAssignments {
     [nodeKey: string]: string;
 }
 
-export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, showBiorhythm }) => {
+export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user }) => {
     const [allEmployees, setAllEmployees] = useState<Employee[]>(() => {
         const savedData = localStorage.getItem('orgChartData_v5');
         return savedData ? JSON.parse(savedData) : [];
@@ -1207,11 +1206,7 @@ export const OrganizationChart: React.FC<OrganizationChartProps> = ({ user, show
                 <div className={`h-1.5 w-full bg-gradient-to-r rounded-t-lg ${leaderRole ? 'from-indigo-500 to-purple-500' : 'from-slate-300 to-slate-400'}`}></div>
 
                 {/* Biorhythm Badge */}
-                {showBiorhythm && (emp as any).birthDate && (
-                    <div className="absolute top-3 right-3 z-10">
-                        <BioRhythm birthDate={(emp as any).birthDate} />
-                    </div>
-                )}
+
 
                 <div className="p-4 flex-1">
                     <div className="flex justify-between items-start mb-3">

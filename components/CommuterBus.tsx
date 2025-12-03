@@ -323,6 +323,15 @@ ${routesCode}
                                     노선 편집
                                 </button>
                             )}
+                            <button onClick={async () => {
+                                if (confirm('정말 모든 데이터를 초기화하고 기본값으로 복원하시겠습니까?')) {
+                                    await db.saveRoutes(initialRoutes);
+                                    setRoutes(initialRoutes);
+                                    alert('데이터가 초기화되었습니다.');
+                                }
+                            }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md">
+                                데이터 초기화
+                            </button>
                         </div>
                     )}
                 </div>

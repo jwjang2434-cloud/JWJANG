@@ -25,9 +25,9 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
         loadUsers();
     }, []);
 
-    const loadUsers = () => {
+    const loadUsers = async () => {
         try {
-            const loadedUsers = getUsers();
+            const loadedUsers = await getUsers();
             setUsers(loadedUsers);
         } catch (e) {
             console.error('Failed to load users', e);
@@ -58,7 +58,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
         setEditingUser(null);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             if (editingUser) {
@@ -73,7 +73,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                 if (formData.password) {
                     updates.password = formData.password;
                 }
-                updateUser(editingUser.id, updates);
+                await updateUser(editingUser.id, updates);
                 alert('사용자 정보가 수정되었습니다.');
             } else {
                 // Add
@@ -81,7 +81,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                     alert('필수 정보를 모두 입력해주세요.');
                     return;
                 }
-                addUser(formData as UserAccount);
+                await addUser(formData as UserAccount);
                 alert('새로운 사용자가 추가되었습니다.');
             }
             loadUsers();
@@ -91,18 +91,71 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
         }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (id === user.id) {
             alert('자신의 계정은 삭제할 수 없습니다.');
             return;
         }
         if (window.confirm('정말로 이 사용자를 삭제하시겠습니까?')) {
             try {
-                deleteUser(id);
+                await deleteUser(id);
                 loadUsers();
             } catch (err) {
                 alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.');
             }
+        }
+    };
+
+    const handleSyncFromOrgChart = async () => {
+        if (!window.confirm('조직도 데이터(localStorage)를 기반으로 계정을 동기화하시겠습니까?\n이미 존재하는 계정(ID)은 건너뜁니다.')) {
+            return;
+        }
+
+        try {
+            const savedData = localStorage.getItem('orgChartData_v5');
+            if (!savedData) {
+                alert('조직도 데이터가 없습니다. 먼저 조직도 엑셀을 업로드해주세요.');
+                return;
+            }
+
+            const employees = JSON.parse(savedData) as any[];
+            let createdCount = 0;
+            let skippedCount = 0;
+
+            // Get current users to check existence
+            const currentUsers = await getUsers();
+            const existingIds = new Set(currentUsers.map(u => u.id));
+
+            for (const emp of employees) {
+                if (!emp.id || !emp.name) continue;
+
+                if (existingIds.has(emp.id)) {
+                    skippedCount++;
+                    continue;
+                }
+
+                // Create new user
+                const newUser: UserAccount = {
+                    id: emp.id,
+                    password: emp.birthDate || '1234', // Default password is birthDate or 1234
+                    name: emp.name,
+                    department: emp.department || '',
+                    role: UserRole.USER,
+                    companyName: emp.primaryCompany || '한일후지코리아(주)',
+                    birthDate: emp.birthDate || '',
+                    avatarUrl: `https://ui-avatars.com/api/?name=${emp.name}&background=random`
+                };
+
+                await addUser(newUser);
+                createdCount++;
+            }
+
+            alert(`동기화 완료!\n- 생성됨: ${createdCount}명\n- 건너뜀(이미 존재): ${skippedCount}명`);
+            loadUsers();
+
+        } catch (e) {
+            console.error('Sync failed', e);
+            alert('동기화 중 오류가 발생했습니다.');
         }
     };
 
@@ -141,15 +194,26 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                         </div>
                         <p className="text-slate-500 dark:text-slate-400">시스템 접속 계정을 관리합니다.</p>
                     </div>
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        새 계정 추가
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleSyncFromOrgChart}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            조직도 데이터 동기화
+                        </button>
+                        <button
+                            onClick={() => handleOpenModal()}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            새 계정 추가
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search */}
@@ -178,6 +242,7 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">사용자</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">아이디</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">비밀번호</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">소속 회사</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">부서</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">권한</th>
@@ -188,20 +253,10 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                 {filteredUsers.map((u) => (
                                     <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                                    {u.avatarUrl ? (
-                                                        <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
-                                                            {u.name.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <span className="font-medium text-slate-800 dark:text-white">{u.name}</span>
-                                            </div>
+                                            <span className="font-medium text-slate-800 dark:text-white">{u.name}</span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.id}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-mono">{u.password}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.companyName}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.department}</td>
                                         <td className="px-6 py-4">
@@ -320,6 +375,19 @@ const AdminUserList: React.FC<AdminUserListProps> = ({ user }) => {
                                     <option value={UserRole.USER}>일반 사용자 (USER)</option>
                                     <option value={UserRole.ADMIN}>관리자 (ADMIN)</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">생년월일 (YYMMDD)</label>
+                                <input
+                                    type="text"
+                                    value={formData.birthDate || ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                                        setFormData({ ...formData, birthDate: val });
+                                    }}
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="예: 900101"
+                                />
                             </div>
 
                             <div className="pt-4 flex gap-3">

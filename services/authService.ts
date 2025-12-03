@@ -1,6 +1,7 @@
 import { UserProfile, UserRole, UserAccount } from '../types';
+import { supabase } from '../utils/supabaseClient';
 
-// 초기 데이터 (LocalStorage가 비어있을 때 사용)
+// 초기 데이터 (LocalStorage가 비어있을 때 사용) - Supabase 마이그레이션용
 const INITIAL_USERS: UserAccount[] = [
   {
     id: 'admin',
@@ -44,82 +45,117 @@ const INITIAL_USERS: UserAccount[] = [
   }
 ];
 
-const STORAGE_KEY = 'portal_users';
-
-// Initialize LocalStorage if empty
-const initializeUsers = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-    return INITIAL_USERS;
-  }
-  return JSON.parse(stored) as UserAccount[];
-};
-
 // Get all users
-export const getUsers = (): UserAccount[] => {
-  return initializeUsers();
+export const getUsers = async (): Promise<UserAccount[]> => {
+  const { data, error } = await supabase
+    .from('portal_users')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching users:', error);
+    return [];
+  }
+
+  // Map snake_case to camelCase if needed, but we'll try to keep schema consistent
+  // For now assuming Supabase columns match our types or we map them
+  return data.map(u => ({
+    id: u.id,
+    password: u.password,
+    name: u.name,
+    department: u.department,
+    role: u.role as UserRole,
+    companyName: u.company_name, // DB column: company_name
+    avatarUrl: u.avatar_url,     // DB column: avatar_url
+    birthDate: u.birth_date      // DB column: birth_date
+  }));
 };
 
 // Add new user
-export const addUser = (user: UserAccount): void => {
-  const users = getUsers();
-  if (users.find(u => u.id === user.id)) {
-    throw new Error('이미 존재하는 아이디입니다.');
+export const addUser = async (user: UserAccount): Promise<void> => {
+  const { error } = await supabase
+    .from('portal_users')
+    .insert([{
+      id: user.id,
+      password: user.password,
+      name: user.name,
+      department: user.department,
+      role: user.role,
+      company_name: user.companyName,
+      avatar_url: user.avatarUrl,
+      birth_date: user.birthDate
+    }]);
+
+  if (error) {
+    throw new Error(error.message);
   }
-  users.push(user);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
 };
 
 // Update user
-export const updateUser = (id: string, updates: Partial<UserAccount>): void => {
-  const users = getUsers();
-  const index = users.findIndex(u => u.id === id);
-  if (index === -1) {
-    throw new Error('사용자를 찾을 수 없습니다.');
-  }
+export const updateUser = async (id: string, updates: Partial<UserAccount>): Promise<void> => {
+  const dbUpdates: any = {};
+  if (updates.name) dbUpdates.name = updates.name;
+  if (updates.password) dbUpdates.password = updates.password;
+  if (updates.department) dbUpdates.department = updates.department;
+  if (updates.role) dbUpdates.role = updates.role;
+  if (updates.companyName) dbUpdates.company_name = updates.companyName;
+  if (updates.avatarUrl) dbUpdates.avatar_url = updates.avatarUrl;
+  if (updates.birthDate) dbUpdates.birth_date = updates.birthDate;
 
-  // ID 변경은 불가 (필요시 삭제 후 재생성)
-  const updatedUser = { ...users[index], ...updates };
-  users[index] = updatedUser;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+  const { error } = await supabase
+    .from('portal_users')
+    .update(dbUpdates)
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };
 
 // Delete user
-export const deleteUser = (id: string): void => {
-  const users = getUsers();
-  const filtered = users.filter(u => u.id !== id);
-  if (users.length === filtered.length) {
-    throw new Error('사용자를 찾을 수 없습니다.');
+export const deleteUser = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('portal_users')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 };
 
 export const login = async (id: string, password: string): Promise<UserProfile> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const { data, error } = await supabase
+    .from('portal_users')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  const users = getUsers();
-  const user = users.find(u => u.id === id);
-
-  if (!user) {
+  if (error || !data) {
     throw new Error('존재하지 않는 아이디입니다.');
   }
 
-  if (user.password !== password) {
+  if (data.password !== password) {
     throw new Error('비밀번호가 올바르지 않습니다.');
   }
 
-  // Return UserProfile (subset of UserAccount)
   return {
-    id: user.id,
-    name: user.name,
-    department: user.department,
-    role: user.role,
-    companyName: user.companyName,
-    avatarUrl: user.avatarUrl || `https://ui-avatars.com/api/?name=${user.name}&background=random`,
-    birthDate: user.birthDate,
-    // custom fields are stored separately in userProfile key in App.tsx logic usually, 
-    // but here we return base profile. App.tsx handles merging custom profile data.
+    id: data.id,
+    name: data.name,
+    department: data.department,
+    role: data.role as UserRole,
+    companyName: data.company_name,
+    avatarUrl: data.avatar_url || `https://ui-avatars.com/api/?name=${data.name}&background=random`,
+    birthDate: data.birth_date,
   };
+};
+
+// Initialize Default Data (One-time utility)
+export const initializeDefaultUsers = async () => {
+  const { count } = await supabase.from('portal_users').select('*', { count: 'exact', head: true });
+  if (count === 0) {
+    console.log('Initializing default users...');
+    for (const user of INITIAL_USERS) {
+      await addUser(user);
+    }
+  }
 };

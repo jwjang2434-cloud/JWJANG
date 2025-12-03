@@ -25,6 +25,7 @@ import { LATEST_NOTICE, NOTICE_LIST } from './constants';
 import DateTimeDisplay from './components/DateTimeDisplay';
 import { ViewPage, UserProfile, LLMConfig, ReferenceDoc, Notice, MenuItem, MenuCategory, AttendanceRecord } from './types';
 import MenuManagement from './components/MenuManagement';
+import { initializeDefaultUsers } from './services/authService';
 
 const App: React.FC = () => {
   console.log("App.tsx: Rendering App component");
@@ -104,10 +105,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Biorhythm State
-  const [showBiorhythm, setShowBiorhythm] = useState(() => {
-    return localStorage.getItem('showBiorhythm') !== 'false';
-  });
+
 
   // Menu Items State
   const [menuItems, setMenuItems] = useState<MenuCategory[]>([
@@ -206,9 +204,7 @@ const App: React.FC = () => {
     setMenuItems(newItems);
   };
 
-  useEffect(() => {
-    localStorage.setItem('showBiorhythm', String(showBiorhythm));
-  }, [showBiorhythm]);
+
 
   // Initialize Theme and LLM Config from LocalStorage
   useEffect(() => {
@@ -259,6 +255,11 @@ const App: React.FC = () => {
         console.error('Migration failed', e);
       }
     }
+  }, []);
+
+  // Initialize Default Users (Supabase)
+  useEffect(() => {
+    initializeDefaultUsers().catch(console.error);
   }, []);
 
   // Notice Popup Check Logic (Auto-show unread MUST_READ notices)
@@ -430,8 +431,7 @@ const App: React.FC = () => {
         toggleTheme={toggleTheme}
         llmConfig={llmConfig}
         onSaveLlmConfig={handleSaveLlmConfig}
-        showBiorhythm={showBiorhythm}
-        onToggleBiorhythm={setShowBiorhythm}
+
       />
 
       {/* Profile Customization Modal */}
@@ -600,7 +600,7 @@ const App: React.FC = () => {
           {currentView === 'SUGGESTION' && <Suggestions user={user} />}
           {currentView === 'NEWSLETTER' && <NewsletterViewer user={user} />}
           {currentView === 'BROCHURE' && <CompanyBrochure user={user} />}
-          {currentView === 'ORG_CHART' && <OrganizationChart user={user} showBiorhythm={showBiorhythm} />}
+          {currentView === 'ORG_CHART' && <OrganizationChart user={user} />}
           {currentView === 'REGULATIONS' && <CompanyRegulations user={user} />}
           {currentView === 'MENU_MANAGEMENT' && <MenuManagement menuItems={menuItems} onUpdateMenuItems={handleUpdateMenuItems} />}
           {currentView === 'ADMIN_USER_LIST' && <AdminUserList user={user} />}

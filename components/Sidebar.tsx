@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, ViewPage, UserRole, ReferenceDoc, Notice, MenuItem, MenuCategory, AttendanceRecord } from '../types';
-import BioRhythm from './BioRhythm';
 import { getLocalIpAddress } from '../utils/networkUtils';
 
 interface SidebarProps {
@@ -132,8 +131,35 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <p className="text-xs text-slate-400 truncate">{user.department}</p>
             </div>
-            {/* BioRhythm passes user birthdate */}
-            <BioRhythm birthDate={user.birthDate} />
+            {/* Birthday Feature */}
+            {user.birthDate && (() => {
+              const birthMonth = parseInt(user.birthDate.substring(2, 4)) - 1;
+              const currentMonth = new Date().getMonth();
+              if (birthMonth === currentMonth) {
+                return (
+                  <div className="relative group cursor-pointer" onClick={(e) => {
+                    e.stopPropagation();
+                    import('canvas-confetti').then((confetti) => {
+                      confetti.default({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                      });
+                    });
+                  }}>
+                    <div className="text-2xl animate-bounce hover:animate-spin transition-all duration-500" title="생일 축하합니다! 클릭해보세요!">
+                      🎁
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-slate-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                      생일 축하합니다! 🎉
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
